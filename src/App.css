@@ -108,10 +108,10 @@ th {
 
 .modal-buttons {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
   margin-top: 20px;
-  width: 60px;
+  width: auto; /* または 100% */
 }
 
 .input-select-container {

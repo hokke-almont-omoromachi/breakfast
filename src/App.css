@@ -34,7 +34,7 @@ input {
 
 button {
   padding: 10px 20px;
-  background-color: #4CAF50;
+  background-color: #FF9966;
   color: white;
   border: none;
   cursor: pointer;
@@ -113,6 +113,11 @@ th {
   margin-top: 20px;
   width: auto; /* または 100% */
 }
+
+.centered-title {
+  text-align: center;
+  size: 40px;
+  }
 
 .input-select-container {
   display: flex;

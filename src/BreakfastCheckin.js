@@ -12,25 +12,37 @@ const BreakfastCheckin = () => {
     const [mealNum, setMealNum] = useState(1);
     const [modalContent, setModalContent] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [inputList, setInputList] = useState([]); // Sử dụng inputList để lưu trữ nhiều mục
+    const [inputList, setInputList] = useState([]);
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, "breakfastGuests"), (snapshot) => {
+        const unsubscribeGuests = onSnapshot(collection(db, "breakfastGuests"), (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setGuestsData(data);
             updateGuestStatistics(data);
-        }, (error) => console.error('Error fetching data:', error));
+        }, (error) => console.error('Error fetching guests:', error));
 
-        return () => unsubscribe();
+        const unsubscribePurchases = onSnapshot(collection(db, "breakfastPurchases"), (snapshot) => {
+            const purchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setInputList(purchases);
+        }, (error) => console.error('Error fetching purchases:', error));
+
+        return () => {
+            unsubscribeGuests();
+            unsubscribePurchases();
+        };
     }, []);
 
-    const handleInput = () => {
-        setInputList(prevList => [...prevList, {
-            roomName: roomName,
-            mealNum: mealNum
-        }]);
-        setRoomName(''); // Reset roomName sau khi nhập
-        setMealNum(1); // Reset mealNum sau khi nhập
+    const handleInput = async () => {
+        try {
+            await setDoc(doc(collection(db, "breakfastPurchases")), {
+                roomName: roomName,
+                mealNum: mealNum
+            });
+            setRoomName('');
+            setMealNum(1);
+        } catch (error) {
+            console.error('Error adding purchase:', error);
+        }
     };
 
     const updateGuestStatistics = (data) => {
@@ -173,6 +185,16 @@ const BreakfastCheckin = () => {
         }
     };
 
+    const handleDeletePurchase = async (index) => {
+        try {
+            const snapshot = await getDocs(collection(db, "breakfastPurchases"));
+            const docId = snapshot.docs[index].id;
+            await deleteDoc(doc(db, "breakfastPurchases", docId));
+        } catch (error) {
+            console.error('Error deleting purchase:', error);
+        }
+    };
+
     return (
         <div className="checkin-container">
             <h2 className="centered-title">
@@ -284,6 +306,7 @@ const BreakfastCheckin = () => {
                     {inputList.map((item, index) => (
                         <div key={index}>
                             <p>部屋番号: {item.roomName} 人数: {item.mealNum} 名</p>
+                            <button onClick={() => handleDeletePurchase(index)}>削除</button>
                         </div>
                     ))}
                 </div>

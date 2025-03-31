@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import * as XLSX from 'xlsx';
-import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs } from './firebaseConfig';
+import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from './firebaseConfig';
 import './App.css';
 
 const BreakfastCheckin = () => {
@@ -13,19 +13,24 @@ const BreakfastCheckin = () => {
     const [modalContent, setModalContent] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [inputList, setInputList] = useState([]);
+    const fileInputRef = useRef(null); // Tạo useRef
 
     useEffect(() => {
-        const unsubscribeGuests = onSnapshot(collection(db, "breakfastGuests"), (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setGuestsData(data);
-            updateGuestStatistics(data);
-        }, (error) => console.error('Error fetching guests:', error));
-
+        const unsubscribeGuests = onSnapshot(
+            query(collection(db, "breakfastGuests"), orderBy("roomNumber")), // Sắp xếp theo roomNumber
+            (snapshot) => {
+                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setGuestsData(data);
+                updateGuestStatistics(data);
+            },
+            (error) => console.error('Error fetching guests:', error)
+        );
+    
         const unsubscribePurchases = onSnapshot(collection(db, "breakfastPurchases"), (snapshot) => {
             const purchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setInputList(purchases);
         }, (error) => console.error('Error fetching purchases:', error));
-
+    
         return () => {
             unsubscribeGuests();
             unsubscribePurchases();
@@ -76,6 +81,7 @@ const BreakfastCheckin = () => {
 
             const formattedData = jsonData.map(row => ({
                 ルーム: row["ルーム"]?.toString().trim() || "",
+                roomNumber: parseInt(row["ルーム"]?.toString().trim()) || 0, // Thêm roomNumber
                 名前: row["名前"] || "",
                 人数: row["人数"] ? parseInt(row["人数"]) : 0,
                 チェックアウト: row["チェックアウト"] ? excelSerialDateToJapaneseDate(row["チェックアウト"]) : new Date().toISOString(),
@@ -179,12 +185,14 @@ const BreakfastCheckin = () => {
                 setTotalGuests(0);
                 setCheckedInGuests(0);
                 alert("データが取消されました!");
+                if (fileInputRef.current) { // Reset input file
+                    fileInputRef.current.value = null;
+                }
             } catch (error) {
                 console.error('Error refreshing data:', error);
             }
         }
     };
-
     const handleDeletePurchase = async (index) => {
         try {
             const snapshot = await getDocs(collection(db, "breakfastPurchases"));
@@ -278,7 +286,7 @@ const BreakfastCheckin = () => {
             <div className="input-and-purchase">
                 <div className="input-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
                     <h3>朝食リストアップロード</h3>
-                    <input type="file" accept=".xlsx, .xls" onChange={(e) => readExcelFile(e.target.files[0])} />
+                    <input type="file" accept=".xlsx, .xls" onChange={(e) => readExcelFile(e.target.files[0])} ref={fileInputRef} /> {/* Thêm ref */}
                     <button onClick={handleRefresh} style={{ width: '150px' }}>取消</button>
                 </div>
                 <div className="purchase-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
@@ -296,7 +304,7 @@ const BreakfastCheckin = () => {
                             onChange={(e) => setMealNum(Number(e.target.value))}
                             style={{ flex: '1', minWidth: '20px', height: '30px' }}
                         >
-                            {[...Array(10).keys()].map(i => (
+                            {[...Array(5).keys()].map(i => (
                                 <option key={i} value={i + 1}>{i + 1} 名</option>
                             ))}
                         </select>
@@ -305,8 +313,22 @@ const BreakfastCheckin = () => {
 
                     {inputList.map((item, index) => (
                         <div key={index}>
-                            <p>部屋番号: {item.roomName} 人数: {item.mealNum} 名</p>
-                            <button onClick={() => handleDeletePurchase(index)}>削除</button>
+                            <p style={{ display: 'flex', alignItems: 'center' }}>
+                                部屋番号: {item.roomName} 　　　人数: {item.mealNum} 名    　　　　　　　　　　　
+                                <button
+                                     style={{
+                                        height: '30px',
+                                        display: 'flex',
+                                        justifyContent: 'center', // Căn giữa theo chiều ngang
+                                        alignItems: 'center', // Căn giữa theo chiều dọc
+                                        padding: '0 10px', // Loại bỏ padding mặc định của nút
+                                      }}
+                                    onClick={() => handleDeletePurchase(index)}
+                                >
+                                    削除
+                                </button>
+                                </p>
+                           
                         </div>
                     ))}
                 </div>

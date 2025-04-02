@@ -143,7 +143,7 @@ const BreakfastCheckin = () => {
 
         setModalContent({
             title: '確認',
-            message: `部屋番号 ${guest.ルーム}　　　　　${guest.名前}　様　　　　　${guest.人数}名<br>朝食チェックインしますか？`,
+            message: `部屋番号 ${guest.ルーム}　　${guest.名前}　様　　${guest.人数}名<br>朝食チェックインしますか？`,
             buttons: [
                 {
                     text: 'チェックイン',
@@ -314,7 +314,7 @@ const BreakfastCheckin = () => {
                     {inputList.map((item, index) => (
                         <div key={index}>
                             <p style={{ display: 'flex', alignItems: 'center' }}>
-                                部屋番号: {item.roomName} 　　　人数: {item.mealNum} 名    　　　　　　　　　　　
+                                部屋番号: {item.roomName} 　　　人数: {item.mealNum} 名 　　　
                                 <button
                                      style={{
                                         height: '30px',

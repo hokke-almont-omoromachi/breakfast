@@ -1,138 +1,165 @@
 .checkin-container {
-  padding: 20px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  max-width: 1500px;
-  margin: auto;
-  background-color: #f9f9f9;
+    padding: 20px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    max-width: 1500px;
+    margin: auto;
+    background-color: #f9f9f9;
 }
 
 .input-and-purchase {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-  justify-content: space-between;
-  align-items: flex-start;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
-
 .input-section {
-  width: 600px;
-  margin-right: 20px;
+    width: 600px;
+    margin-right: 20px;
 }
 
 .purchase-section {
-  width: 600px;
+    width: 600px;
 }
 
 input {
-  padding: 8px;
-  margin: 10px 0;
-  width: 100%;
-  box-sizing: border-box;
+    padding: 8px;
+    margin: 10px 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 button {
-  padding: 10px 20px;
-  background-color: #FF9966;
-  color: white;
-  border: none;
-  cursor: pointer;
-  width: auto;
-  height: auto;
+    padding: 10px 20px;
+    background-color: #FF9966;
+    color: white;
+    border: none;
+    cursor: pointer;
+    width: auto;
+    height: auto;
+    border-radius: 8px; /* Bo tròn tất cả các nút */
 }
 
 button:hover {
-  background-color: #e01717;
+    background-color: #e01717;
 }
 
 .guest-lists-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
 }
 
 .guest-list {
-  flex: 1;
-  min-width: 300px;
+    flex: 1;
+    min-width: 300px;
 }
 
 @media (min-width: 768px) {
-  .guest-lists-container {
-    flex-direction: row;
-  }
+    .guest-lists-container {
+        flex-direction: row;
+    }
 }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
 }
 
 th,
 td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
 }
 
 th {
-  background-color: #f0f0f0;
+    background-color: #f0f0f0;
 }
 
 .modal {
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal-content {
-  background-color: #fefefe;
-  margin: 10% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 90%;
-  max-width: 500px;
-  border-radius: 8px;
-  position: relative;
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+    text-align: center;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.modal-content > div {
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.modal-content > div p {
+    margin: 5px 0;
+}
+
+.modal-content > div span,
+.modal-content > div button {
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    border-radius: 8px; /* Bo tròn nút "チェックイン" */
 }
 
 .modal-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
-  width: auto; /* または 100% */
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    width: auto; /* Hoặc 100% */
+}
+
+.modal-buttons button {
+    border-radius: 8px; /* Bo tròn nút "一括チェックイン" và "戻る" */
 }
 
 .centered-title {
-  text-align: center;
-  size: 40px;
-  }
+    text-align: center;
+    size: 40px;
+}
 
 .input-select-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
 }
 
 .input-select-container input {
-  flex: 1;
-  min-width: 150px;
+    flex: 1;
+    min-width: 150px;
 }
 
 .input-select-container select {
-  flex: 1;
-  min-width: 100px;
+    flex: 1;
+    min-width: 100px;
 }

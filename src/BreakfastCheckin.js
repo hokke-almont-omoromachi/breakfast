@@ -14,6 +14,7 @@ const BreakfastCheckin = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [inputList, setInputList] = useState([]);
     const fileInputRef = useRef(null);
+    const [nameInput, setNameInput] = useState(''); // State cho tên nhập vào
 
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
@@ -23,13 +24,13 @@ const BreakfastCheckin = () => {
                 setGuestsData(data);
                 updateGuestStatistics(data);
             },
-            (error) => console.error('Lỗi khi lấy dữ liệu khách:', error)
+            (error) => console.error('Data fetch error', error)
         );
 
         const unsubscribePurchases = onSnapshot(collection(db, "breakfastPurchases"), (snapshot) => {
             const purchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setInputList(purchases);
-        }, (error) => console.error('Lỗi khi lấy dữ liệu mua:', error));
+        }, (error) => console.error('Purchase data fetch error:', error));
 
         return () => {
             unsubscribeGuests();
@@ -46,7 +47,7 @@ const BreakfastCheckin = () => {
             setRoomName('');
             setMealNum(1);
         } catch (error) {
-            console.error('Lỗi khi thêm dữ liệu mua:', error);
+            console.error('Add Data erro:', error);
         }
     };
 
@@ -88,7 +89,7 @@ const BreakfastCheckin = () => {
                     if (rowData["ルーム"] && numberOfGuests > 0) {
                         const sanitizedRoomNumber = String(rowData["ルーム"]).replace(/[^a-zA-Z0-9-]/g, '');
                         const sanitizedGuestName = String(guestName).replace(/[^a-zA-Z0-9-]/g, '');
-                        const uniqueId = `${sanitizedRoomNumber}-${sanitizedGuestName}-${numberOfGuests}`;
+                        const uniqueId = `${sanitizedRoomNumber}-${sanitizedGuestName}-${numberOfGuests}-${i}`;
                         formattedData.push({
                             id: uniqueId,
                             ルーム: rowData["ルーム"]?.toString().trim(),
@@ -146,10 +147,9 @@ const BreakfastCheckin = () => {
             setGuestsData(formattedData);
             await uploadDataToFirestore(formattedData);
         } catch (error) {
-            console.error('Lỗi khi đọc file CSV:', error);
+            console.error('CSV reading error:', error);
         }
     };
-
 
     const uploadDataToFirestore = async (data) => {
         try {
@@ -159,7 +159,7 @@ const BreakfastCheckin = () => {
                 await setDoc(doc(collectionRef, guest.id), guest);
             }
         } catch (error) {
-            console.error('Lỗi khi tải dữ liệu lên:', error);
+            console.error('Upload error:', error);
         }
     };
 
@@ -168,32 +168,40 @@ const BreakfastCheckin = () => {
             const snapshot = await getDocs(collectionRef);
             await Promise.all(snapshot.docs.map((doc) => deleteDoc(doc.ref)));
         } catch (error) {
-            console.error('Lỗi khi xóa dữ liệu:', error);
+            console.error('Delete error:', error);
         }
     };
 
-    const handleCheckIn = () => {
-        const matchingGuests = guestsData.filter(g => g.ルーム === roomNumber.trim());
-
-        if (matchingGuests.length === 0) {
+    const handleRoomCheckIn = () => {
+        if (!roomNumber.trim()) {
+            // Nếu ô input trống, chỉ hiển thị modal lỗi
             setModalContent({
                 title: '朝食未購入',
-                message: 'フロントに申し付けください。',
-                buttons: [
-                    { text: '戻る', action: () => closeModal() }
-                ]
+                message: '部屋番号を入力して下さい。',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
             });
             setIsModalOpen(true);
             return;
         }
 
-        const allCheckedIn = matchingGuests.every(guest => guest.status === 'arrived');
-        const hasMultipleRooms = matchingGuests.length > 1;
+        const matchingGuests = guestsData.filter(g => g.ルーム === roomNumber.trim());
 
+        if (matchingGuests.length === 0) {
+            // Nếu không tìm thấy phòng khớp, hiển thị modal lỗi
+            setModalContent({
+                title: '朝食未購入',
+                message: 'フロントに申し付けください。',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
+            return;
+        }
+
+        // Nếu tìm thấy phòng khớp, hiển thị modal xác nhận
         setModalContent({
             title: '確認',
             message: matchingGuests.map(guest => ({
-                text: `ルーム ${guest.ルーム}　　${guest.名前}　様　　${guest.人数}名`,
+                text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
                 id: guest.id,
                 status: guest.status
             })),
@@ -201,13 +209,58 @@ const BreakfastCheckin = () => {
                 {
                     text: '一括チェックイン',
                     action: () => handleCheckInAll(matchingGuests),
-                    style: (hasMultipleRooms && !allCheckedIn) ? {} : { display: 'none' } // Show if multiple rooms and not all checked in
+                    style: matchingGuests.length > 1 ? {} : { display: 'none' } // Chỉ hiển thị nếu có nhiều hơn 1 khách
                 },
                 { text: '戻る', action: () => closeModal() }
             ]
         });
         setIsModalOpen(true);
+    };
 
+    const handleNameCheckIn = () => {
+        if (!nameInput.trim()) {
+            // Nếu ô input trống, chỉ hiển thị modal lỗi
+            setModalContent({
+                title: '朝食未購入',
+                message: '名前を入力して下さい。',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
+            return;
+        }
+
+
+        const matchingGuests = guestsData.filter(g => g.名前.includes(nameInput.trim()));
+
+        if (matchingGuests.length === 0) {
+            // Nếu không tìm thấy khách khớp, hiển thị modal lỗi
+            setModalContent({
+                title: '朝食未購入',
+                message: '該当する名前の朝食購入データが見つかりません。',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
+            return;
+        }
+
+        // Nếu tìm thấy khách khớp, hiển thị modal xác nhận
+        setModalContent({
+            title: '確認',
+            message: matchingGuests.map(guest => ({
+                text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
+                id: guest.id,
+                status: guest.status
+            })),
+            buttons: [
+                {
+                    text: '一括チェックイン',
+                    action: () => handleCheckInAll(matchingGuests),
+                    style: matchingGuests.length > 1 ? {} : { display: 'none' } // Chỉ hiển thị nếu có nhiều hơn 1 khách
+                },
+                { text: '戻る', action: () => closeModal() }
+            ]
+        });
+        setIsModalOpen(true);
     };
 
     const handleCheckInGuest = async (guestId, room, count) => {
@@ -215,42 +268,70 @@ const BreakfastCheckin = () => {
             const guest = guestsData.find((g) => g.id === guestId);
             if (guest) {
                 await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived' }, { merge: true });
-                alert(`部屋 ${guest.ルーム}　　${guest.名前} 様　　${guest.人数}名 チェックインしました。`);
+                setModalContent({
+                    title: 'チェックイン',
+                    message: `部屋 ${guest.ルーム}　${guest.名前} 様　${guest.人数}名 チェックインしました。`,
+                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                });
             } else {
-                console.warn(`Khách có ID ${guestId} không tìm thấy.`);
-                alert(`部屋 ${room}　　${count}名 チェックインしました。`);
+                console.warn(`ID ${guestId} is not found`);
+                setModalContent({
+                    title: 'チェックイン',
+                    message: `部屋 ${room}　${count}名 チェックインしました。`,
+                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                });
             }
+            setIsModalOpen(true);
         } catch (error) {
-            console.error('Lỗi khi cập nhật trạng thái check-in:', error);
+            console.error('Check-In status error:', error);
+            setModalContent({
+                title: 'Lỗi',
+                message: 'チェックインステータスエラー',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
         }
-        closeModal();
         setRoomNumber('');
     };
 
     const handleCheckInAll = async (guests) => {
         try {
             for (const guest of guests) {
-                if (guest.status !== 'arrived') { // Chỉ check-in những khách chưa check-in
+                if (guest.status !== 'arrived') {
                     await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived' }, { merge: true });
                 }
             }
             if (guests && guests.length > 0) {
-                alert(`${guests[0].ルーム}号室のお客様は、皆様チェックインされました。`);
+                setModalContent({
+                    title: 'チェックイン',
+                    message: `全員チェックインしました。`,
+                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                });
+            } else {
+                setModalContent({
+                    title: 'チェックイン',
+                    message: '全員チェックインしました。',
+                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                });
             }
-            else {
-                alert(`Tất cả khách đã được check-in.`);
-            }
-
+            setIsModalOpen(true);
         } catch (error) {
             console.error('Failed to check in all guests: ', error);
+            setModalContent({
+                title: 'Lỗi',
+                message: '全員チェックインエラー',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
         }
-        closeModal();
         setRoomNumber('');
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
         setModalContent(null);
+        setRoomNumber(''); // Xóa giá trị phòng
+        setNameInput(''); // Xóa giá trị tên
     };
 
     const getCurrentDate = () => {
@@ -262,28 +343,49 @@ const BreakfastCheckin = () => {
     };
 
     const handleRefresh = async () => {
-        if (window.confirm("データを取消しますか？")) {
-            try {
-                await deleteCollectionData(collection(db, "breakfastGuests"));
-                setGuestsData([]);
-                setTotalGuests(0);
-                setCheckedInGuests(0);
-                alert("データが取消されました!");
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = null;
-                }
-            } catch (error) {
-                console.error('Lỗi khi làm mới dữ liệu:', error);
-            }
-        }
+        setModalContent({
+            title: 'データ取消',
+            message: 'データを取消しますか？',
+            buttons: [
+                {
+                    text: 'はい',
+                    action: async () => {
+                        try {
+                            await deleteCollectionData(collection(db, "breakfastGuests"));
+                            setGuestsData([]);
+                            setTotalGuests(0);
+                            setCheckedInGuests(0);
+                            setModalContent({
+                                title: 'データ取消',
+                                message: 'データが取消されました!',
+                                buttons: [{ text: '戻る', action: () => closeModal() }]
+                            });
+                            if (fileInputRef.current) {
+                                fileInputRef.current.value = null;
+                            }
+                        } catch (error) {
+                            console.error('Refresh data errorRefresh data error', error);
+                            setModalContent({
+                                title: 'Lỗi',
+                                message: 'データ更新エラー',
+                                buttons: [{ text: '戻る', action: () => closeModal() }]
+                            });
+                        }
+                    }
+                },
+                { text: 'いいえ', action: () => closeModal() }
+            ]
+        });
+        setIsModalOpen(true);
     };
+
     const handleDeletePurchase = async (index) => {
         try {
             const snapshot = await getDocs(collection(db, "breakfastPurchases"));
             const docId = snapshot.docs[index].id;
             await deleteDoc(doc(db, "breakfastPurchases", docId));
         } catch (error) {
-            console.error('Lỗi khi xóa giao dịch mua:', error);
+            console.error('Purchase error:', error);
         }
     };
 
@@ -297,7 +399,7 @@ const BreakfastCheckin = () => {
         } else if (fileType === 'csv') {
             readCSVFile(file);
         } else {
-            alert('File không hợp lệ. Vui lòng chọn file .xlsx, .xls, hoặc .csv.');
+            alert('ファイル　.xlsx, .xls, .csv　をアップロードして下さい。');
             if (fileInputRef.current) {
                 fileInputRef.current.value = null;
             }
@@ -313,21 +415,19 @@ const BreakfastCheckin = () => {
                 <div className="modal">
                     <div className="modal-content">
                         <h3>{modalContent.title}</h3>
-                        {Array.isArray(modalContent.message) ? (
-                            modalContent.message.map((guest, index) => {
-                                return (
-                                    <div key={guest.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
-                                        <p>{guest.text}</p>
-                                        {guest.status === 'arrived' ? (
-                                            <span>チェックイン済のお客様です</span>
-                                        ) : (
-                                            <button onClick={() => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)}>チェックイン</button>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        ) : (
+                        {typeof modalContent.message === 'string' ? (
                             <p dangerouslySetInnerHTML={{ __html: modalContent.message }}></p>
+                        ) : (
+                            Array.isArray(modalContent.message) && modalContent.message.map((guest, index) => (
+                                <div key={guest.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
+                                    <p>{guest.text}</p>
+                                    {guest.status === 'arrived' ? (
+                                        <span>チェックイン済</span>
+                                    ) : (
+                                        <button onClick={() => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)}>チェックイン</button>
+                                    )}
+                                </div>
+                            ))
                         )}
                         <div className="modal-buttons">
                             {modalContent.buttons.map((button, index) => (
@@ -343,15 +443,27 @@ const BreakfastCheckin = () => {
             <p>本日人数 {totalGuests} 名</p>
             <p>未到着人数 {totalGuests - checkedInGuests} 名</p>
 
-            <input style={{ flex: '1', minWidth: '80px', height: '30px' }} type="text" placeholder="部屋番号入力" value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} />
+            <input
+                style={{ flex: '1', minWidth: '80px', height: '30px' }}
+                type="number"
+                inputMode="numeric"
+                placeholder="部屋番号入力"
+                value={roomNumber}
+                onChange={(e) => setRoomNumber(e.target.value)}/>
             <button
                 style={{ width: '150px', display: 'block', margin: '0 auto' }}
-                onClick={handleCheckIn}>ルームチェック
+                onClick={handleRoomCheckIn}>
+                部屋チェック
             </button>
 
-            <input style={{ flex: '1', minWidth: '80px', height: '30px' }} type="text" placeholder="名前入力" />
+            <input
+                style={{ flex: '1', minWidth: '80px', height: '30px' }}
+                type="text"  placeholder="名前入力"   value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}/>
             <button
-                style={{ width: '150px', display: 'block', margin: '0 auto' }}>名前チェック
+                style={{ width: '150px', display: 'block', margin: '0 auto' }}
+                onClick={handleNameCheckIn}>
+                名前チェック
             </button>
 
             <div className="guest-lists-container">
@@ -366,8 +478,8 @@ const BreakfastCheckin = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {guestsData.filter(guest => guest.status === 'arrived').map(guest => (
-                                <tr key={guest.id}>
+                            {guestsData.filter(guest => guest.status === 'arrived').map((guest, index) => (
+                                <tr key={index}>
                                     <td style={{ textAlign: 'center' }}>{guest.ルーム}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.名前}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.人数}</td>
@@ -388,8 +500,8 @@ const BreakfastCheckin = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {guestsData.filter(guest => guest.status !== 'arrived').map(guest => (
-                                <tr key={guest.id}>
+                            {guestsData.filter(guest => guest.status !== 'arrived').map((guest, index) => (
+                                <tr key={index}>
                                     <td style={{ textAlign: 'center' }}>{guest.ルーム}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.名前}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.人数}</td>
@@ -450,7 +562,6 @@ const BreakfastCheckin = () => {
                                     削除
                                 </button>
                             </p>
-
                         </div>
                     ))}
                 </div>
@@ -460,4 +571,3 @@ const BreakfastCheckin = () => {
 };
 
 export default BreakfastCheckin;
-

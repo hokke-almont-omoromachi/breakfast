@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from './firebaseConfig';
-import './App.css';
+import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from './firebaseConfig'; // Import from your firebaseConfig.js file
+import './App.css'; // Make sure the CSS file is in the same directory, or adjust the path if needed.
 
 const BreakfastCheckin = () => {
     const [roomNumber, setRoomNumber] = useState('');
@@ -14,7 +14,7 @@ const BreakfastCheckin = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [inputList, setInputList] = useState([]);
     const fileInputRef = useRef(null);
-    const [nameInput, setNameInput] = useState(''); // State cho tên nhập vào
+    const [nameInput, setNameInput] = useState(''); // State for name input
 
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
@@ -38,6 +38,12 @@ const BreakfastCheckin = () => {
         };
     }, []);
 
+    const handleInputChangeName = (e) => {
+        // Chuyển đổi chỉ các ký tự alphabet thành chữ hoa
+        const value = e.target.value.replace(/[a-zA-Z]/g, (char) => char.toUpperCase());
+        setNameInput(value);
+    };
+
     const handleInput = async () => {
         try {
             await setDoc(doc(collection(db, "breakfastPurchases")), {
@@ -47,7 +53,7 @@ const BreakfastCheckin = () => {
             setRoomName('');
             setMealNum(1);
         } catch (error) {
-            console.error('Add Data erro:', error);
+            console.error('Add Data error:', error);
         }
     };
 
@@ -105,7 +111,7 @@ const BreakfastCheckin = () => {
             await uploadDataToFirestore(formattedData);
 
         } catch (error) {
-            console.error('Lỗi khi đọc file Excel:', error);
+            console.error('Error reading Excel file:', error);
         }
     };
 
@@ -125,7 +131,7 @@ const BreakfastCheckin = () => {
                     });
                     jsonData.push(row);
                 } else {
-                    console.warn(`Bỏ qua dòng ${i + 1} do số lượng giá trị không nhất quán.`);
+                    console.warn(`Skipping line ${i + 1} due to inconsistent number of values.`);
                 }
             }
             const formattedData = jsonData.map(row => {
@@ -174,7 +180,7 @@ const BreakfastCheckin = () => {
 
     const handleRoomCheckIn = () => {
         if (!roomNumber.trim()) {
-            // Nếu ô input trống, chỉ hiển thị modal lỗi
+            // If the input field is empty, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: '部屋番号を入力して下さい。',
@@ -187,7 +193,7 @@ const BreakfastCheckin = () => {
         const matchingGuests = guestsData.filter(g => g.ルーム === roomNumber.trim());
 
         if (matchingGuests.length === 0) {
-            // Nếu không tìm thấy phòng khớp, hiển thị modal lỗi
+            // If no matching room is found, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: 'フロントに申し付けください。',
@@ -197,7 +203,7 @@ const BreakfastCheckin = () => {
             return;
         }
 
-        // Nếu tìm thấy phòng khớp, hiển thị modal xác nhận
+        // If matching room is found, show confirmation modal
         setModalContent({
             title: '確認',
             message: matchingGuests.map(guest => ({
@@ -209,7 +215,7 @@ const BreakfastCheckin = () => {
                 {
                     text: '一括チェックイン',
                     action: () => handleCheckInAll(matchingGuests),
-                    style: matchingGuests.length > 1 ? {} : { display: 'none' } // Chỉ hiển thị nếu có nhiều hơn 1 khách
+                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
                 },
                 { text: '戻る', action: () => closeModal() }
             ]
@@ -219,7 +225,7 @@ const BreakfastCheckin = () => {
 
     const handleNameCheckIn = () => {
         if (!nameInput.trim()) {
-            // Nếu ô input trống, chỉ hiển thị modal lỗi
+            // If the input field is empty, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: '名前を入力して下さい。',
@@ -229,11 +235,10 @@ const BreakfastCheckin = () => {
             return;
         }
 
-
         const matchingGuests = guestsData.filter(g => g.名前.includes(nameInput.trim()));
 
         if (matchingGuests.length === 0) {
-            // Nếu không tìm thấy khách khớp, hiển thị modal lỗi
+            // If no matching guest is found, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: '該当する名前の朝食購入データが見つかりません。',
@@ -243,7 +248,7 @@ const BreakfastCheckin = () => {
             return;
         }
 
-        // Nếu tìm thấy khách khớp, hiển thị modal xác nhận
+        // If matching guests are found, show confirmation modal
         setModalContent({
             title: '確認',
             message: matchingGuests.map(guest => ({
@@ -255,7 +260,7 @@ const BreakfastCheckin = () => {
                 {
                     text: '一括チェックイン',
                     action: () => handleCheckInAll(matchingGuests),
-                    style: matchingGuests.length > 1 ? {} : { display: 'none' } // Chỉ hiển thị nếu có nhiều hơn 1 khách
+                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
                 },
                 { text: '戻る', action: () => closeModal() }
             ]
@@ -327,11 +332,62 @@ const BreakfastCheckin = () => {
         setRoomNumber('');
     };
 
+    const handleCancelCheckIn = async (guestId) => {
+        const guestToCancel = guestsData.find(guest => guest.id === guestId);
+        if (guestToCancel) {
+            setModalContent({
+                title: '確認',
+                message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しますか？`,
+                buttons: [
+                    {
+                        text: 'はい',
+                        action: async () => {
+                            try {
+                                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived' }, { merge: true });
+                                setModalContent({
+                                    title: '取消',
+                                    message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しました。`,
+                                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                                });
+                                setIsModalOpen(true);
+                            } catch (error) {
+                                console.error('Error cancelling check-in:', error);
+                                setModalContent({
+                                    title: 'Lỗi',
+                                    message: 'チェックインの取り消しに失敗しました。',
+                                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                                });
+                                setIsModalOpen(true);
+                            }
+                        }
+                    },
+                    { text: 'いいえ', action: () => closeModal() }
+                ]
+            });
+            setIsModalOpen(true);
+        }
+    };
+
+    const handleIndividualCheckIn = (guest) => {
+        setModalContent({
+            title: '確認',
+            message: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
+            buttons: [
+                {
+                    text: 'チェックイン',
+                    action: () => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)
+                },
+                { text: '戻る', action: () => closeModal() }
+            ]
+        });
+        setIsModalOpen(true);
+    };
+
     const closeModal = () => {
         setIsModalOpen(false);
         setModalContent(null);
-        setRoomNumber(''); // Xóa giá trị phòng
-        setNameInput(''); // Xóa giá trị tên
+        setRoomNumber(''); // Clear room number
+        setNameInput(''); // Clear name input
     };
 
     const getCurrentDate = () => {
@@ -360,16 +416,18 @@ const BreakfastCheckin = () => {
                                 message: 'データが取消されました!',
                                 buttons: [{ text: '戻る', action: () => closeModal() }]
                             });
+                            setIsModalOpen(true);
                             if (fileInputRef.current) {
                                 fileInputRef.current.value = null;
                             }
                         } catch (error) {
-                            console.error('Refresh data errorRefresh data error', error);
+                            console.error('Refresh data error', error);
                             setModalContent({
                                 title: 'Lỗi',
                                 message: 'データ更新エラー',
                                 buttons: [{ text: '戻る', action: () => closeModal() }]
                             });
+                            setIsModalOpen(true);
                         }
                     }
                 },
@@ -406,6 +464,12 @@ const BreakfastCheckin = () => {
         }
     };
 
+    const [isPurchaseSectionVisible, setIsPurchaseSectionVisible] = useState(false); // Changed initial state to false
+
+    const togglePurchaseSectionVisibility = () => {
+        setIsPurchaseSectionVisible(!isPurchaseSectionVisible);
+    };
+
     return (
         <div className="checkin-container">
             <h2 className="centered-title">
@@ -418,16 +482,33 @@ const BreakfastCheckin = () => {
                         {typeof modalContent.message === 'string' ? (
                             <p dangerouslySetInnerHTML={{ __html: modalContent.message }}></p>
                         ) : (
-                            Array.isArray(modalContent.message) && modalContent.message.map((guest, index) => (
-                                <div key={guest.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
-                                    <p>{guest.text}</p>
-                                    {guest.status === 'arrived' ? (
-                                        <span>チェックイン済</span>
-                                    ) : (
-                                        <button onClick={() => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)}>チェックイン</button>
-                                    )}
-                                </div>
-                            ))
+                            Array.isArray(modalContent.message) && modalContent.message.map((guest, index) => {
+                                const isCheckedIn = guest.status === 'arrived';
+                                return (
+                                    <div key={guest.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
+                                        <p>{guest.text}</p>
+                                        {isCheckedIn ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span>チェックイン済</span>
+                                                <button
+                                                    style={{
+                                                        backgroundColor: 'red',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        padding: '5px 10px',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={() => handleCancelCheckIn(guest.id)}
+                                                >
+                                                    CXL
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button onClick={() => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)}>チェックイン</button>
+                                        )}
+                                    </div>
+                                );
+                            })
                         )}
                         <div className="modal-buttons">
                             {modalContent.buttons.map((button, index) => (
@@ -443,28 +524,125 @@ const BreakfastCheckin = () => {
             <p>本日人数 {totalGuests} 名</p>
             <p>未到着人数 {totalGuests - checkedInGuests} 名</p>
 
-            <input
-                style={{ flex: '1', minWidth: '80px', height: '30px' }}
-                type="number"
-                inputMode="numeric"
-                placeholder="部屋番号入力"
-                value={roomNumber}
-                onChange={(e) => setRoomNumber(e.target.value)}/>
-            <button
-                style={{ width: '150px', display: 'block', margin: '0 auto' }}
-                onClick={handleRoomCheckIn}>
-                部屋チェック
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <input
+                        style={{ width: '100%', height: '30px', marginBottom: '10px' }}
+                        type="number"
+                        inputMode="numeric"
+                        placeholder="部屋番号入力"
+                        value={roomNumber}
+                        onChange={(e) => setRoomNumber(e.target.value)}
+                    />
+                    <button
+                        style={{ width: '100%', maxWidth: '150px' }}
+                        onClick={handleRoomCheckIn}
+                    >
+                        部屋チェック
+                    </button>
+                </div>
 
-            <input
-                style={{ flex: '1', minWidth: '80px', height: '30px' }}
-                type="text"  placeholder="名前入力"   value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}/>
-            <button
-                style={{ width: '150px', display: 'block', margin: '0 auto' }}
-                onClick={handleNameCheckIn}>
-                名前チェック
-            </button>
+                <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <input
+                        style={{ width: '100%', height: '30px', marginBottom: '10px' }}
+                        type="text"
+                        placeholder="名前入力"
+                        value={nameInput}
+                        onChange={handleInputChangeName}
+                    />
+                    <button
+                        style={{ width: '100%', maxWidth: '150px' }}
+                        onClick={handleNameCheckIn}
+                    >
+                        名前チェック
+                    </button>
+                </div>
+
+                <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ width: '100%', textAlign: 'center' }}>
+                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                            <h3>当日朝食購入　（フロント入力用）</h3>
+                             <button
+                                style={{
+                                    borderRadius: '50%',
+                                    width: '24px',
+                                    height: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginLeft: '8px',
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    padding: 0,
+                                    backgroundColor: '#ddd'
+                                }}
+                                onClick={togglePurchaseSectionVisibility}
+                            >
+                                {isPurchaseSectionVisible ? '−' : '+'}
+                            </button>
+                        </div>
+                        {isPurchaseSectionVisible && (
+                        <>
+                            <div className="input-select-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="部屋番号"
+                                    value={roomName}
+                                    onChange={(e) => setRoomName(e.target.value)}
+                                    style={{ width: '80px', height: '30px' }}
+                                />
+                                <select
+                                    value={mealNum}
+                                    onChange={(e) => setMealNum(Number(e.target.value))}
+                                    style={{ width: '60px', height: '30px' }}
+                                >
+                                    {[...Array(5).keys()].map(i => (
+                                        <option key={i} value={i + 1}>{i + 1} 名</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleInput}>入力</button>
+                            {inputList.length > 0 && (
+                                <div style={{ marginTop: '10px', width: '100%' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', margin: 'auto' }}>
+                                        <thead>
+                                            <tr>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>部屋番号</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>人数</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>CXL</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {inputList.map((item, index) => (
+                                                <tr key={index}>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.roomName}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.mealNum}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
+                                                        <button
+                                                            style={{
+                                                                backgroundColor: 'red',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                padding: '5px 10px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.7em'
+                                                            }}
+                                                            onClick={() => handleDeletePurchase(index)}
+                                                        >
+                                                            削除
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
 
             <div className="guest-lists-container">
                 <div className="guest-list">
@@ -475,6 +653,7 @@ const BreakfastCheckin = () => {
                                 <th style={{ textAlign: 'center' }}>部屋番号</th>
                                 <th style={{ textAlign: 'center' }}>名前</th>
                                 <th style={{ textAlign: 'center' }}>人数</th>
+                                <th style={{ textAlign: 'center' }}>CXL</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -483,6 +662,20 @@ const BreakfastCheckin = () => {
                                     <td style={{ textAlign: 'center' }}>{guest.ルーム}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.名前}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.人数}</td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <button
+                                            style={{
+                                                backgroundColor: 'red',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '5px 10px',
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={() => handleCancelCheckIn(guest.id)}
+                                        >
+                                            CXL
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -497,6 +690,7 @@ const BreakfastCheckin = () => {
                                 <th style={{ textAlign: 'center' }}>部屋番号</th>
                                 <th style={{ textAlign: 'center' }}>名前</th>
                                 <th style={{ textAlign: 'center' }}>人数</th>
+                                <th style={{ textAlign: 'center' }}>IN</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -505,6 +699,20 @@ const BreakfastCheckin = () => {
                                     <td style={{ textAlign: 'center' }}>{guest.ルーム}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.名前}</td>
                                     <td style={{ textAlign: 'center' }}>{guest.人数}</td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <button
+                                            style={{
+                                                backgroundColor: 'green',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '5px 10px',
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={() => handleIndividualCheckIn(guest)}
+                                        >
+                                            IN
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -512,7 +720,7 @@ const BreakfastCheckin = () => {
                 </div>
             </div>
 
-            <div className="input-and-purchase">
+            <div className="input-and-purchase" style={{ marginTop: '20px' }}>
                 <div className="input-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
                     <h3>朝食リストアップロード</h3>
                     <input
@@ -521,53 +729,14 @@ const BreakfastCheckin = () => {
                         onChange={handleFileChange}
                         ref={fileInputRef}
                     />
-                    <button onClick={handleRefresh} style={{ width: '150px' }}>取消</button>
-                </div>
-                <div className="purchase-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
-                    <h3>当日朝食購入　（フロント入力用）</h3>
-                    <div className="input-select-container">
-                        <input
-                            type="text"
-                            placeholder="部屋番号"
-                            value={roomName}
-                            onChange={(e) => setRoomName(e.target.value)}
-                            style={{ flex: '1', minWidth: '80px', height: '30px' }}
-                        />
-                        <select
-                            value={mealNum}
-                            onChange={(e) => setMealNum(Number(e.target.value))}
-                            style={{ flex: '1', minWidth: '20px', height: '30px' }}
-                        >
-                            {[...Array(5).keys()].map(i => (
-                                <option key={i} value={i + 1}>{i + 1} 名</option>
-                            ))}
-                        </select>
-                    </div>
-                    <button style={{ width: '150px' }} onClick={handleInput}>入力</button>
-
-                    {inputList.map((item, index) => (
-                        <div key={index}>
-                            <p style={{ display: 'flex', alignItems: 'center' }}>
-                                部屋番号: {item.roomName} 　　　人数: {item.mealNum} 名
-                                <button
-                                    style={{
-                                        height: '30px',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        padding: '0 10px',
-                                    }}
-                                    onClick={() => handleDeletePurchase(index)}
-                                >
-                                    削除
-                                </button>
-                            </p>
-                        </div>
-                    ))}
+                    <button onClick={handleRefresh} style={{ width: '150px', marginTop: '10px' }}>取消</button>
                 </div>
             </div>
         </div>
     );
+
+
+
 };
 
 export default BreakfastCheckin;

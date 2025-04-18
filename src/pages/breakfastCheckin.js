@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from './firebaseConfig'; // Import from your firebaseConfig.js file
-import './App.css'; // Make sure the CSS file is in the same directory, or adjust the path if needed.
+import { useNavigate } from 'react-router-dom';
+import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from '../firebaseConfig'; // Import from your firebaseConfig.js file
+import '../App'; // Make sure the CSS file is in the same directory, or adjust the path if needed.
 
 const BreakfastCheckin = () => {
     const [roomNumber, setRoomNumber] = useState('');
@@ -14,7 +16,10 @@ const BreakfastCheckin = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [inputList, setInputList] = useState([]);
     const fileInputRef = useRef(null);
-    const [nameInput, setNameInput] = useState(''); // State for name input
+    const [nameInput, setNameInput] = useState(''); 
+    const navigate = useNavigate();
+    const goToHome = () => {navigate('/home'); };
+    const goToGuest = () => {navigate('/guest'); };
 
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
@@ -471,7 +476,16 @@ const BreakfastCheckin = () => {
     };
 
     return (
-        <div className="checkin-container">
+        <div className="checkin-container" style={{backgroundColor:'#F2EBE0'}}>
+                <div>
+                <img 
+                    src="/assets/home.png"
+                    alt="Home" 
+                    style={{ cursor: 'pointer', width: '50px', height: '50px' }} 
+                    onClick={goToHome} 
+                    />
+                    <button onClick={goToGuest}>Go to Guest</button>
+                 </div>
             <h2 className="centered-title">
                 はなもみ　　朝食チェックイン　　{getCurrentDate()}
             </h2>
@@ -521,8 +535,8 @@ const BreakfastCheckin = () => {
                 </div>
             )}
 
-            <p>本日人数 {totalGuests} 名</p>
-            <p>未到着人数 {totalGuests - checkedInGuests} 名</p>
+            <p style={{color:'#811121', fontSize:'20px', fontWeight:'bold'}}>本日人数 <span style={{color:'red', fontSize:'30px', fontWeight:'bold'}}>{totalGuests} </span> 名</p>
+            <p>未到着人数 <span style={{fontWeight:'bold'}}>{totalGuests - checkedInGuests}</span> 名　　　　到着済人数 <span style={{fontWeight:'bold'}}>{checkedInGuests} </span>名</p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
                 <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -561,7 +575,7 @@ const BreakfastCheckin = () => {
                 <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ width: '100%', textAlign: 'center' }}>
                         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                            <h3>当日朝食購入　（フロント入力用）</h3>
+                            <h3 style={{marginTop:'10px'}}>当日朝食購入　（フロント入力用）</h3>
                              <button
                                 style={{
                                     borderRadius: '50%',
@@ -571,10 +585,11 @@ const BreakfastCheckin = () => {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     marginLeft: '8px',
+                                    marginTop:0,
                                     cursor: 'pointer',
                                     border: 'none',
                                     padding: 0,
-                                    backgroundColor: '#ddd'
+                                    backgroundColor: '#CEBFA6'
                                 }}
                                 onClick={togglePurchaseSectionVisibility}
                             >
@@ -604,20 +619,20 @@ const BreakfastCheckin = () => {
                             <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleInput}>入力</button>
                             {inputList.length > 0 && (
                                 <div style={{ marginTop: '10px', width: '100%' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', margin: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', margin: 'auto'}}>
                                         <thead>
                                             <tr>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>部屋番号</th>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>人数</th>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>CXL</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {inputList.map((item, index) => (
                                                 <tr key={index}>
-                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.roomName}</td>
-                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.mealNum}</td>
-                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.roomName}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.mealNum}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                                         <button
                                                             style={{
                                                                 backgroundColor: 'red',
@@ -629,7 +644,7 @@ const BreakfastCheckin = () => {
                                                             }}
                                                             onClick={() => handleDeletePurchase(index)}
                                                         >
-                                                            削除
+                                                            X
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -646,60 +661,23 @@ const BreakfastCheckin = () => {
 
             <div className="guest-lists-container">
                 <div className="guest-list">
-                    <h3>到着済 ({checkedInGuests} 名)</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'center' }}>部屋番号</th>
-                                <th style={{ textAlign: 'center' }}>名前</th>
-                                <th style={{ textAlign: 'center' }}>人数</th>
-                                <th style={{ textAlign: 'center' }}>CXL</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {guestsData.filter(guest => guest.status === 'arrived').map((guest, index) => (
-                                <tr key={index}>
-                                    <td style={{ textAlign: 'center' }}>{guest.ルーム}</td>
-                                    <td style={{ textAlign: 'center' }}>{guest.名前}</td>
-                                    <td style={{ textAlign: 'center' }}>{guest.人数}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <button
-                                            style={{
-                                                backgroundColor: 'red',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '5px 10px',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={() => handleCancelCheckIn(guest.id)}
-                                        >
-                                            CXL
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="guest-list">
                     <h3>未到着 ({totalGuests - checkedInGuests} 名)</h3>
                     <table>
                         <thead>
                             <tr>
-                                <th style={{ textAlign: 'center' }}>部屋番号</th>
-                                <th style={{ textAlign: 'center' }}>名前</th>
-                                <th style={{ textAlign: 'center' }}>人数</th>
-                                <th style={{ textAlign: 'center' }}>IN</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>部屋番号</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
                             </tr>
                         </thead>
                         <tbody>
                             {guestsData.filter(guest => guest.status !== 'arrived').map((guest, index) => (
                                 <tr key={index}>
-                                    <td style={{ textAlign: 'center' }}>{guest.ルーム}</td>
-                                    <td style={{ textAlign: 'center' }}>{guest.名前}</td>
-                                    <td style={{ textAlign: 'center' }}>{guest.人数}</td>
-                                    <td style={{ textAlign: 'center' }}>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.ルーム}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.名前}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.人数}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>
                                         <button
                                             style={{
                                                 backgroundColor: 'green',
@@ -710,7 +688,44 @@ const BreakfastCheckin = () => {
                                             }}
                                             onClick={() => handleIndividualCheckIn(guest)}
                                         >
-                                            IN
+                                            O
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="guest-list">
+                    <h3>到着済 ({checkedInGuests} 名)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>部屋番号</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>名前</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>人数</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>取消</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {guestsData.filter(guest => guest.status === 'arrived').map((guest, index) => (
+                                <tr key={index}>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.ルーム}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.名前}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.人数}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>
+                                        <button
+                                            style={{
+                                                backgroundColor: 'red',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '5px 10px',
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={() => handleCancelCheckIn(guest.id)}
+                                        >
+                                            X
                                         </button>
                                     </td>
                                 </tr>

@@ -478,13 +478,14 @@ const BreakfastCheckin = () => {
     return (
         <div className="checkin-container" style={{backgroundColor:'#F2EBE0'}}>
                 <div>
-                <img 
-                    src="/assets/home.png"
-                    alt="Home" 
-                    style={{ cursor: 'pointer', width: '50px', height: '50px' }} 
-                    onClick={goToHome} 
+                    <img src={`${process.env.PUBLIC_URL}/assets/home.png`} alt="Home" 
+                        style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
+                        onClick={goToHome} 
                     />
-                    <button onClick={goToGuest}>Go to Guest</button>
+                    <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" 
+                        style={{ cursor: 'pointer', width: '40px', height: '38px' }} 
+                        onClick={goToGuest} 
+                    />
                  </div>
             <h2 className="centered-title">
                 はなもみ　　朝食チェックイン　　{getCurrentDate()}

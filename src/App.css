@@ -46,6 +46,24 @@ button:hover {
     background-color: #e01717;
 }
 
+
+.fixed-size-button {
+    width: 120px;        /* hoặc 140px, tùy bạn chọn */
+    height: 40px;
+    padding: 0;
+    background-color: #FF9966;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  
+  .fixed-size-button:hover {
+    background-color: #e01717;
+  }
+
+
 .guest-lists-container {
     display: flex;
     flex-direction: column;
@@ -163,3 +181,29 @@ th {
     flex: 1;
     min-width: 100px;
 }
+
+.room-input {
+    padding: 0.5rem;
+    font-size: 2.5rem;
+    width: 60%;
+    min-width: 250px;
+    height: 8rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    border: 3px solid #d68501;
+    border-radius: 6px;
+    outline: none;
+    box-sizing: border-box; /* Đảm bảo box-sizing */
+  }
+  
+  .room-input:focus {
+    border-color: rgb(247, 193, 112);
+  }
+  
+
+  input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { db, doc, updateDoc } from '../firebaseConfig';
 import '../App.css';
+import { useNavigate } from 'react-router-dom';
 
 const LANGUAGES = ['ja', 'en', 'zh', 'ko'];
 
@@ -9,77 +9,104 @@ const TEXTS = {
     title: '朝食チェックイン',
     placeholder: '部屋番号を入力してください',
     button: '送信',
-    success: 'チェックイン完了！',
-    error: 'エラーが発生しました。部屋番号を確認してください。',
+    error: '無効な部屋番号です',
   },
   en: {
     title: 'Breakfast Check-In',
     placeholder: 'Enter your room number',
     button: 'Submit',
-    success: 'Check-in successful!',
-    error: 'An error occurred. Please check the room number.',
+    error: 'Invalid room number',
   },
   zh: {
     title: '早餐登记',
     placeholder: '请输入房间号',
     button: '提交',
-    success: '登记成功！',
-    error: '发生错误，请确认房间号。',
+    error: '无效的房间号',
   },
   ko: {
     title: '아침 식사 체크인',
     placeholder: '객실 번호를 입력하세요',
     button: '제출',
-    success: '체크인 완료!',
-    error: '오류가 발생했습니다. 객실 번호를 확인해주세요.',
+    error: '유효하지 않은 객실 번호입니다',
   },
 };
+
+const VALID_ROOMS = [
+  ...Array.from({ length: 20 }, (_, i) => 301 + i),
+  ...Array.from({ length: 20 }, (_, i) => 401 + i),
+  ...Array.from({ length: 20 }, (_, i) => 501 + i),
+  ...Array.from({ length: 20 }, (_, i) => 601 + i),
+  ...Array.from({ length: 20 }, (_, i) => 701 + i),
+  ...Array.from({ length: 20 }, (_, i) => 801 + i),
+  ...Array.from({ length: 20 }, (_, i) => 901 + i),
+  ...Array.from({ length: 20 }, (_, i) => 1001 + i),
+  ...Array.from({ length: 20 }, (_, i) => 1101 + i),
+  ...Array.from({ length: 20 }, (_, i) => 1201 + i),
+  ...Array.from({ length: 10 }, (_, i) => 1301 + i),
+];
 
 const GuestCheckin = () => {
   const [roomNumber, setRoomNumber] = useState('');
   const [language, setLanguage] = useState('ja');
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = async () => {
-    if (!roomNumber) return;
+  const goToHome = () => navigate('/home');
+  const goToRestaurant = () => navigate('/restaurant');
 
-    try {
-      const roomRef = doc(db, 'breakfastGuests', roomNumber.trim());
-      await updateDoc(roomRef, { status: 'waiting' });
-      setMessage(TEXTS[language].success);
-      setRoomNumber('');
-    } catch (error) {
-      console.error('Error updating document:', error);
-      setMessage(TEXTS[language].error);
+  const handleSubmit = () => {
+    const num = parseInt(roomNumber, 10);
+    if (!VALID_ROOMS.includes(num)) {
+      setError(TEXTS[language].error);
+    } else {
+      setError('');
+      alert(`${TEXTS[language].title} OK: ${roomNumber}`); // tạm thời alert để test
     }
   };
 
   return (
-    <div className="guest-container" style={{ backgroundColor: '#F2EBE0', textAlign: 'center', padding: '2rem', minHeight: '100vh' }}>
-      {/* Language Switcher */}
-      <div style={{ marginBottom: '1rem' }}>
-        {LANGUAGES.map((lang) => (
-          <button key={lang} onClick={() => setLanguage(lang)} style={{ margin: '0 5px' }}>
-            {lang === 'ja' ? '日本語' : lang === 'en' ? 'English' : lang === 'zh' ? '中文' : '한국어'}
-          </button>
-        ))}
+    <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '90vh' }}>
+      <div style={{ marginBottom: '10px' }}>
+        <img
+          src={`${process.env.PUBLIC_URL}/assets/home.png`} alt="Home"
+          style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+          onClick={goToHome}
+        />
+        <img
+          src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant"
+          style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+          onClick={goToRestaurant}
+        />
       </div>
 
-      <h2>{TEXTS[language].title}</h2>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ marginBottom: '3rem' }}>
+          {LANGUAGES.map((lang) => (
+            <button key={lang} className="fixed-size-button"  onClick={() => setLanguage(lang)}
+              style={{ margin: '0 5px' }}>
+              {lang === 'ja' ? '日本語' : lang === 'en' ? 'English' : lang === 'zh' ? '中文' : '한국어'}
+            </button>
+          ))}
+        </div>
 
-      <input
-        type="text"
-        value={roomNumber}
-        onChange={(e) => setRoomNumber(e.target.value)}
-        placeholder={TEXTS[language].placeholder}
-        style={{ padding: '0.5rem', fontSize: '1rem', width: '60%', marginBottom: '1rem' }}
-      />
-      <br />
-      <button onClick={handleSubmit} style={{ padding: '0.5rem 2rem', fontSize: '1rem' }}>
-        {TEXTS[language].button}
-      </button>
+        <h2 style={{ height: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {TEXTS[language].title}
+        </h2>
 
-      {message && <p style={{ marginTop: '1rem', color: message === TEXTS[language].success ? 'green' : 'red' }}>{message}</p>}
+        <input
+          className="room-input" type="number" value={roomNumber}
+          onChange={(e) => setRoomNumber(e.target.value)} placeholder={TEXTS[language].placeholder}
+          style={{ direction: language === 'ja' || language === 'zh' || language === 'ko' ? 'ltr' : 'ltr', // Hoặc 'rtl' nếu cần
+          }}/>
+
+        <br />
+
+        <button className="fixed-size-button" onClick={handleSubmit}>
+          {TEXTS[language].button}
+        </button>
+        
+        {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+      </div>
     </div>
   );
 };

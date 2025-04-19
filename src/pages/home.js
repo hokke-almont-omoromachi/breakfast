@@ -31,7 +31,7 @@ function Home() {
         </div>
 
         <div style={{
-                padding: '2rem',
+                padding: '3rem',
                 textAlign: 'center',
               }}>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem' }}>
@@ -39,7 +39,7 @@ function Home() {
                   <img src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant" style={{ width: '100px', height: '100px' }} />
                 </Link>
                 <Link to="/guest">
-                  <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" style={{ width: '100px', height: '100px' }} />
+                  <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" style={{ width: '96px', heig6ht: '100px' }} />
                 </Link>
             </div>
         </div>

@@ -51,16 +51,29 @@ const BreakfastCheckin = () => {
       
       const handleCompositionEnd = (e) => {
         setIsComposing(false);
-        setNameInput(e.target.value); // Chỉ cập nhật state khi đã kết thúc composition
+        
+        // Sau khi kết thúc composition, mới xử lý viết hoa nếu cần
+        const value = e.target.value;
+      
+        // Kiểm tra nếu là toàn alphabet thì mới viết hoa
+        if (/^[A-Za-z\s]+$/.test(value)) {
+            const uppercased = value.replace(/[a-zA-Z]/g, (char) => char.toUpperCase());
+            setNameInput(uppercased);
+          } else {
+            setNameInput(value);
+          }
+      
+        // Xoá giá trị tạm
+        setNameInputValue('');
       };
 
       const handleInputChange = (e) => {
         if (!isComposing) {
-          // Chỉ xử lý và viết hoa nếu không đang trong quá trình composition
-          const value = e.target.value.replace(/[a-zA-Z]/g, (char) => char.toUpperCase());
-          setNameInput(value);
+          // Nếu không đang composition, thì có thể là người dùng đang gõ tên người nước ngoài
+          const value = e.target.value;
+          setNameInput(value); // Tạm thời lưu nguyên bản (chưa viết hoa ở đây)
         } else {
-          // Cập nhật state tạm thời để hiển thị trên input trong quá trình composition
+          // Trong quá trình composition (IME), chỉ lưu tạm để hiển thị
           setNameInputValue(e.target.value);
         }
       };
@@ -574,16 +587,16 @@ const BreakfastCheckin = () => {
                 </div>
 
                 <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <input
-    style={{ width: '100%', height: '30px', marginBottom: '10px' }}
-    type="text"
-    placeholder="名前入力"
-    value={isComposing ? nameInputValue : nameInput}
-    onChange={handleInputChange}
-    onCompositionStart={handleCompositionStart}
-    onCompositionUpdate={handleInputChange} // Có thể cần xử lý khác nếu cần hiển thị gợi ý
-    onCompositionEnd={handleCompositionEnd}
-  />
+                    <input
+                        style={{ width: '100%', height: '30px', marginBottom: '10px' }}
+                        type="text"
+                        placeholder="名前入力"
+                        value={isComposing ? nameInputValue : nameInput}
+                        onChange={handleInputChange}
+                        onCompositionStart={handleCompositionStart}
+                        onCompositionUpdate={handleInputChange} // Có thể cần xử lý khác nếu cần hiển thị gợi ý
+                        onCompositionEnd={handleCompositionEnd}
+                    />
                     <button
                         style={{ width: '100%', maxWidth: '150px' }}
                         onClick={handleNameCheckIn}

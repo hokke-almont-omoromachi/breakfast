@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from '../firebaseConfig'; // Import from your firebaseConfig.js file
-import '../App'; // Make sure the CSS file is in the same directory, or adjust the path if needed.
+import '../App'; 
 
 const BreakfastCheckin = () => {
     const [roomNumber, setRoomNumber] = useState('');
@@ -49,13 +48,10 @@ const BreakfastCheckin = () => {
         setIsComposing(true);
       };
       
-      const handleCompositionEnd = (e) => {
+    const handleCompositionEnd = (e) => {
         setIsComposing(false);
         
-        // Sau khi kết thúc composition, mới xử lý viết hoa nếu cần
-        const value = e.target.value;
-      
-        // Kiểm tra nếu là toàn alphabet thì mới viết hoa
+    const value = e.target.value;
         if (/^[A-Za-z\s]+$/.test(value)) {
             const uppercased = value.replace(/[a-zA-Z]/g, (char) => char.toUpperCase());
             setNameInput(uppercased);
@@ -63,17 +59,14 @@ const BreakfastCheckin = () => {
             setNameInput(value);
           }
       
-        // Xoá giá trị tạm
         setNameInputValue('');
       };
 
-      const handleInputChange = (e) => {
+    const handleInputChange = (e) => {
         if (!isComposing) {
-          // Nếu không đang composition, thì có thể là người dùng đang gõ tên người nước ngoài
           const value = e.target.value;
-          setNameInput(value); // Tạm thời lưu nguyên bản (chưa viết hoa ở đây)
+          setNameInput(value); 
         } else {
-          // Trong quá trình composition (IME), chỉ lưu tạm để hiển thị
           setNameInputValue(e.target.value);
         }
       };
@@ -110,7 +103,6 @@ const BreakfastCheckin = () => {
             const workbook = XLSX.read(fileData, { type: 'array' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
             const headers = jsonData[0]?.map(h => h?.toString().trim() || '');
             const formattedData = [];
 
@@ -214,7 +206,6 @@ const BreakfastCheckin = () => {
 
     const handleRoomCheckIn = () => {
         if (!roomNumber.trim()) {
-            // If the input field is empty, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: '部屋番号を入力して下さい。',
@@ -224,10 +215,9 @@ const BreakfastCheckin = () => {
             return;
         }
 
-        const matchingGuests = guestsData.filter(g => g.ルーム === roomNumber.trim());
+    const matchingGuests = guestsData.filter(g => g.ルーム === roomNumber.trim());
 
         if (matchingGuests.length === 0) {
-            // If no matching room is found, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: 'フロントに申し付けください。',
@@ -237,7 +227,6 @@ const BreakfastCheckin = () => {
             return;
         }
 
-        // If matching room is found, show confirmation modal
         setModalContent({
             title: '確認',
             message: matchingGuests.map(guest => ({
@@ -259,7 +248,6 @@ const BreakfastCheckin = () => {
 
     const handleNameCheckIn = () => {
         if (!nameInput.trim()) {
-            // If the input field is empty, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: '名前を入力して下さい。',
@@ -269,10 +257,11 @@ const BreakfastCheckin = () => {
             return;
         }
 
-        const matchingGuests = guestsData.filter(g => g.名前.includes(nameInput.trim()));
+        const matchingGuests = guestsData.filter(g =>
+            g.名前.toLowerCase().includes(nameInput.trim().toLowerCase())
+        );
 
         if (matchingGuests.length === 0) {
-            // If no matching guest is found, show an error modal
             setModalContent({
                 title: '朝食未購入',
                 message: '該当する名前の朝食購入データが見つかりません。',
@@ -282,7 +271,6 @@ const BreakfastCheckin = () => {
             return;
         }
 
-        // If matching guests are found, show confirmation modal
         setModalContent({
             title: '確認',
             message: matchingGuests.map(guest => ({
@@ -420,8 +408,8 @@ const BreakfastCheckin = () => {
     const closeModal = () => {
         setIsModalOpen(false);
         setModalContent(null);
-        setRoomNumber(''); // Clear room number
-        setNameInput(''); // Clear name input
+        setRoomNumber(''); 
+        setNameInput(''); 
     };
 
     const getCurrentDate = () => {

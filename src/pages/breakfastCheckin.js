@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebaseConfig';
 import {
-  collection,setDoc,doc,deleteDoc,onSnapshot,getDocs,queryorderBy,} from 'firebase/firestore';
+  collection,setDoc,doc,deleteDoc,onSnapshot,getDocs,query, orderBy,} from 'firebase/firestore';
 import '../App'; 
 
 const BreakfastCheckin = () => {

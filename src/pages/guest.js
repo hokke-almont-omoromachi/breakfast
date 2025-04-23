@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../App.css';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
@@ -20,6 +20,10 @@ const TEXTS = {
         success: 'チェックインが完了しました',
         home: 'ホームへ',
         restaurant: 'レストランへ',
+        modal_welcome: 'いらっしゃいませ！',
+        modal_tray: '●　トレーやお箸などは入口にご用意しております。',
+        modal_card: '●　お食事がお済みになりましたら、カードの裏側にお願いいたします。',
+        modal_back: '戻る', // Thêm dòng này
     },
     en: {
         title_input: 'Enter your room number',
@@ -34,20 +38,28 @@ const TEXTS = {
         success: 'Check-in completed',
         home: 'Go to Home',
         restaurant: 'Go to Restaurant',
+        modal_welcome: 'Welcome!',
+        modal_tray: '●　Trays, chopsticks, and other utensils are available at the entrance.',
+        modal_card: '●　Once you have finished your meal, kindly turn the card to the back side.',
+        modal_back: 'Back', // Thêm dòng này
     },
     zh: {
-        title_input: '请输入房间号',
-        title_confirm: '请确认您的信息',
-        button_submit: '提交',
-        button_confirm: '确认',
-        error_invalid: '无效的房间号',
-        error_not_found: '未找到该房间号',
+        title_input: '請輸入房號',
+        title_confirm: '請確認您的資料',
+        button_submit: '送出',
+        button_confirm: '確認',
+        error_invalid: '房號無效',
+        error_not_found: '找不到該房號',
         name: '姓名',
-        guests: '人数',
-        instruction: '您要以上述信息办理入住吗？',
-        success: '办理入住完成',
-        home: '返回首页',
-        restaurant: '前往餐厅',
+        guests: '人數',
+        instruction: '是否使用上述資料辦理入住？',
+        success: '已完成入住手續',
+        home: '回到首頁',
+        restaurant: '前往餐廳',
+        modal_welcome: '歡迎光臨！',
+        modal_tray: '●　入口處備有托盤與筷子等用品，歡迎自行取用。',
+        modal_card: '●　用餐結束後，煩請將卡片放回背面位置，感謝您的協助。',
+        modal_back: '返回', // Thêm dòng này
     },
     ko: {
         title_input: '객실 번호를 입력하세요',
@@ -62,6 +74,10 @@ const TEXTS = {
         success: '체크인이 완료되었습니다',
         home: '홈으로 이동',
         restaurant: '레스토랑으로 이동',
+        modal_welcome: '어서 오세요!',
+        modal_tray: '●　트레이와 젓가락 등은 입구에 준비해 드렸습니다.',
+        modal_card: '●　식사를 마치신 후에는 카드 뒷면에 놓아주시면 감사하겠습니다.',
+        modal_back: '돌아가기', // Thêm dòng này
     },
 };
 
@@ -85,16 +101,21 @@ const GuestCheckin = () => {
     const [error, setError] = useState('');
     const [guestInfo, setGuestInfo] = useState(null);
     const [isConfirming, setIsConfirming] = useState(false);
+    const [showModal, setShowModal] = useState(false);
     const navigate = useNavigate();
+    const [modalGuestName, setModalGuestName] = useState('');
+    const timeoutId = useRef(null); // Thêm useRef ở đây
 
     const goToHome = () => navigate('/home');
     const goToRestaurant = () => navigate('/restaurant');
+    const goToFull = () => navigate('/fullSeat');
 
     const handleInputChange = (e) => {
         setRoomNumber(e.target.value);
         setError('');
         setGuestInfo(null);
         setIsConfirming(false);
+        setShowModal(false);
     };
 
     const handleSubmit = async () => {
@@ -103,6 +124,7 @@ const GuestCheckin = () => {
             setError(TEXTS[language].error_invalid);
             setGuestInfo(null);
             setIsConfirming(false);
+            setShowModal(false);
             return;
         }
 
@@ -114,14 +136,17 @@ const GuestCheckin = () => {
             setError(TEXTS[language].error_not_found);
             setGuestInfo(null);
             setIsConfirming(false);
+            setShowModal(false);
         } else {
             const guestsData = [];
             querySnapshot.forEach((doc) => {
-                guestsData.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                guestsData.push({ id: doc.id, ...data, 名前: data.名前 }); 
             });
             setGuestInfo(guestsData);
             setIsConfirming(true);
             setError('');
+            setShowModal(false); // Đóng modal nếu đang mở khi chuyển sang bước xác nhận
         }
     };
 
@@ -134,10 +159,16 @@ const GuestCheckin = () => {
                         await updateDoc(guestDocRef, { status: "arrived" });
                     })
                 );
-                alert(TEXTS[language].success);
-                setRoomNumber('');
-                setGuestInfo(null);
-                setIsConfirming(false);
+                setModalGuestName(guestInfo.map(g => `${g.名前}${language === 'ja' ? ' 様' : ''}`).join(', '));
+                setShowModal(true);
+                // Thiết lập timeout để ẩn modal sau 10 giây
+                timeoutId.current = setTimeout(() => {
+                    setShowModal(false);
+                    setRoomNumber('');
+                    setGuestInfo(null);
+                    setIsConfirming(false);
+                    timeoutId.current = null;
+                }, 10000);
             } catch (error) {
                 console.error("Error updating check-in status:", error);
                 alert("チェックインに失敗しました"); // Thông báo lỗi (có thể tùy chỉnh)
@@ -145,8 +176,38 @@ const GuestCheckin = () => {
         }
     };
 
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setRoomNumber('');
+        setGuestInfo(null);
+        setIsConfirming(false);
+        if (timeoutId.current) {
+            clearTimeout(timeoutId.current);
+            timeoutId.current = null;
+        }
+    };
+
+    useEffect(() => {
+        if (showModal) {
+            const timer = setTimeout(() => {
+                setShowModal(false);
+                setRoomNumber('');
+                setGuestInfo(null);
+                setIsConfirming(false);
+                timeoutId.current = null;
+            }, 10000); 
+            return () => clearTimeout(timer);
+        }
+        return () => {
+            if (timeoutId.current) {
+                clearTimeout(timeoutId.current);
+                timeoutId.current = null;
+            }
+        };
+    }, [showModal]);
+
     return (
-        <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '90vh' }}>
+        <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '100vh' }}>
             <div style={{ marginBottom: '10px' }}>
                 <img
                     src={`${process.env.PUBLIC_URL}/assets/home.png`} alt="Home"
@@ -157,6 +218,11 @@ const GuestCheckin = () => {
                     src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToRestaurant}
+                />
+                <img
+                    src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Full"
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+                    onClick={goToFull}
                 />
             </div>
 
@@ -190,37 +256,91 @@ const GuestCheckin = () => {
                 )}
 
                 {isConfirming && guestInfo && guestInfo.length > 0 && (
-                    <div style={{
-                        marginTop: '20px',
-                        border: '1px solid #ccc',
-                        borderRadius: '5px',
-                        backgroundColor: 'white',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        padding: '20px',
-                        width: '80%', // Điều chỉnh theo viền vàng nếu cần
-                        maxWidth: '400px', // Điều chỉnh theo viền vàng nếu cần
-                        margin: '20px auto',
-                        textAlign: 'center'
-                    }}>
+                    <div className="confirm-box">
                         <p style={{ marginBottom: '20px' }}>{TEXTS[language].instruction}</p>
                         <div style={{ marginBottom: '20px' }}>
                             {guestInfo.map((guest) => (
-                                <div key={guest.id} style={{ marginBottom: '10px' }}>
-                                    <div>{TEXTS[language].name}: {guest.名前}</div>
-                                    <div>{TEXTS[language].guests}: {guest.人数}</div>
+                                <div key={guest.id} style={{ marginBottom: '10px', textAlign: 'left' }}>
+                                    <div style={{ marginLeft: '100px'}}>
+                                        <span>{TEXTS[language].name.toUpperCase()}: 　</span>
+                                        <span style={{ fontWeight: "bold" }}>{guest.名前}</span>
+                                        <span>
+                                            {language === 'ja' && '　 様'}
+                                            {language === 'ko' && ' 　 님'}
+                                        </span>
+                                    </div>
+                                    <div style={{ marginLeft: '100px'}}>
+                                        <span>{TEXTS[language].guests.toUpperCase()}: 　</span>
+                                        <span style={{ fontWeight: "bold" }}>{guest.人数}</span>
+                                        <span>
+                                            {language === 'ja' && ' 　名'}
+                                            {language === 'en' && `　 Guest${guest.人数 > 1 ? 's' : ''}`}
+                                            {language === 'ko' && '  　명'}
+                                        </span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                        <button className="fixed-size-button" onClick={handleConfirmCheckin}>
-                            {TEXTS[language].button_confirm}
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            <button className="fixed-size-button" onClick={() => setIsConfirming(false)}>
+                                戻る
+                            </button>
+                            <button className="fixed-size-button" onClick={handleConfirmCheckin}>
+                                {TEXTS[language].button_confirm}
+                            </button>
+                        </div>
                     </div>
                 )}
+
                 {isConfirming && guestInfo && guestInfo.length === 0 && (
                     <p style={{ color: 'red', marginTop: '10px' }}>{TEXTS[language].error_not_found}</p>
                 )}
+
+            {showModal && (
+                <div className="model">
+                    <p className="modal-guest-name">
+                        {modalGuestName}
+                    </p>
+                    <p className="modal-welcome-text">
+                        {TEXTS[language].modal_welcome}
+                    </p>
+                    <p className="modal-tray-info">
+                        {TEXTS[language].modal_tray}
+                        <img src={`${process.env.PUBLIC_URL}/assets/tray.png`} alt="トレー" className="modal-tray-image" />
+                    </p>
+                    <p className="modal-card-info">
+                        {TEXTS[language].modal_card}
+                    </p>
+                    <img
+                        src={`${process.env.PUBLIC_URL}/assets/card change.png`}
+                        alt="カード"
+                        style={{ 
+
+                            verticalAlign: 'middle',
+                            height: 'auto', /* Để chiều cao tự động điều chỉnh theo tỷ lệ */
+                            maxHeight: '100%', /* Không vượt quá chiều cao của phần tử cha */
+                            maxWidth: '100%', /* Không vượt quá chiều rộng của phần tử cha */
+                            marginBottom: '10px',
+                            display: 'block',
+                         }}
+
+
+                    />
+                     <button className="fixed-size-button" onClick={handleCloseModal}>
+                        {TEXTS[language].modal_back}
+                    </button>
+                </div>
+            )}
+
+                {showModal && <div className="modal-overlay" style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 999,
+                }}></div>}
             </div>
         </div>
     );

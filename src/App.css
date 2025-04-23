@@ -199,6 +199,17 @@ th {
   .room-input:focus {
     border-color: rgb(247, 193, 112);
   }
+
+  .confirm-box {
+    border: 2px solid rgb(247, 193, 112);
+    border-radius: 5px;
+    background-color: white;
+    padding: 20px;
+    width: 80%;
+    max-width: 400px;
+    margin: 20px auto;
+    text-align: center;
+  }
   
 
   input[type=number]::-webkit-inner-spin-button,
@@ -207,3 +218,67 @@ input[type=number]::-webkit-outer-spin-button {
   margin: 0;
 }
 
+.model {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #F2EBE0;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    text-align: center;
+    width: 400px; /* Điều chỉnh chiều rộng này */
+    max-width: 90%; /* Đảm bảo không vượt quá chiều rộng màn hình nhỏ */
+    opacity: 1; /* Đặt độ mờ ban đầu là 1 (hiển thị đầy đủ) */
+    transition: opacity 0.3s ease-in-out; /* Thêm transition cho thuộc tính opacity */
+}
+
+.model.hidden {
+    opacity: 0; /* Khi class 'hidden' được thêm, độ mờ sẽ là 0 (ẩn) */
+    pointer-events: none; /* Ngăn chặn tương tác khi modal ẩn */
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.modal-guest-name {
+    font-size: 1.2em;
+    margin-bottom: 5px; /* Giảm khoảng cách dưới tên khách */
+}
+
+.modal-welcome-text {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-top: 5px; /* Giảm khoảng cách trên dòng chào */
+    margin-bottom: 15px;
+}
+
+.modal-tray-info {
+    text-align: left; /* Căn trái cho thông tin về tray */
+    margin-bottom: 10px;
+    display: flex; /* Để căn chỉnh ảnh và chữ trên cùng dòng */
+    align-items: center; /* Căn giữa theo chiều dọc */
+}
+
+.modal-card-info {
+    text-align: left; /* Căn trái cho thông tin về card */
+    margin-bottom: 15px;
+    /* display: flex; Loại bỏ thuộc tính này */
+    /* align-items: center; Loại bỏ thuộc tính này */
+}
+
+.modal-tray-image {
+    margin-left: 5px;
+    vertical-align: middle;
+    height: 90px; /* Tăng kích thước ảnh tray */
+    width: auto; /* Để giữ tỷ lệ khung hình */
+}

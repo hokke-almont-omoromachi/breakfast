@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
-import { db, collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from '../firebaseConfig'; // Import from your firebaseConfig.js file
+import { db } from '../firebaseConfig';
+import {
+  collection,setDoc,doc,deleteDoc,onSnapshot,getDocs,queryorderBy,} from 'firebase/firestore';
 import '../App'; 
 
 const BreakfastCheckin = () => {
@@ -21,6 +23,7 @@ const BreakfastCheckin = () => {
     const navigate = useNavigate();
     const goToHome = () => {navigate('/home'); };
     const goToGuest = () => {navigate('/guest'); };
+    const gotoFull = () => {navigate('/fullSeat'); };
 
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
@@ -500,9 +503,14 @@ const BreakfastCheckin = () => {
                         onClick={goToHome} 
                     />
                     <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" 
-                        style={{ cursor: 'pointer', width: '40px', height: '38px' }} 
+                        style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
                         onClick={goToGuest} 
                     />
+                    <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" 
+                        style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
+                        onClick={gotoFull} 
+                    />
+                    
                  </div>
             <h2 className="centered-title">
                 はなもみ　　朝食チェックイン　　{getCurrentDate()}

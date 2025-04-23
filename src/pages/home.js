@@ -26,7 +26,7 @@ function Home() {
 
           <div style={{ marginTop: '1rem', fontFamily: "'Noto Serif JP', serif" }}>
             <h3 style={{ fontSize: '1.25rem' }}>朝食・レストラン</h3>
-            <p style={{ fontSize: '1rem', marginTop: '-0.5rem' }}>★　郷土の味めぐり　★</p>
+            <p style={{ fontSize: '1rem', marginTop: '-0.5rem' }}>　郷土の味めぐり　</p>
           </div>
         </div>
 
@@ -39,7 +39,10 @@ function Home() {
                   <img src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant" style={{ width: '100px', height: '100px' }} />
                 </Link>
                 <Link to="/guest">
-                  <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" style={{ width: '96px', heig6ht: '100px' }} />
+                  <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" style={{ width: '100px', heig6ht: '100px' }} />
+                </Link>
+                <Link to="/fullSeat">
+                  <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" style={{ width: '100px', heig6ht: '100px' }} />
                 </Link>
             </div>
         </div>

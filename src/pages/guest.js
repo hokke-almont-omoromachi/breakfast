@@ -16,7 +16,7 @@ const TEXTS = {
         error_not_found: '該当する部屋番号が見つかりません',
         name: '名前',
         guests: '人数',
-        instruction: '上記の内容でチェックインしますか？',
+        instruction: '下記の内容でチェックインしますか？',
         success: 'チェックインが完了しました',
         home: 'ホームへ',
         restaurant: 'レストランへ',

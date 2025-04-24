@@ -8,6 +8,7 @@ const FullSeat = () => {
     const goToHome = () => navigate('/home');
     const goToRestaurant = () => navigate('/restaurant');
     const goToGuest = () => { navigate('/guest'); };
+    const goToFull = () => navigate('/fullSeat');
 
     return (
         <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '100vh' }}>
@@ -26,6 +27,10 @@ const FullSeat = () => {
                     src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToGuest}
+                />
+               <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" 
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
+                    onClick={goToFull} 
                 />
             </div>
 

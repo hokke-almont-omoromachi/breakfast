@@ -22,6 +22,7 @@ const BreakfastCheckin = () => {
     const [nameInputValue, setNameInputValue] = useState('');
     const navigate = useNavigate();
     const goToHome = () => {navigate('/home'); };
+    const goToRestaurant = () => navigate('/restaurant');
     const goToGuest = () => {navigate('/guest'); };
     const gotoFull = () => {navigate('/fullSeat'); };
 
@@ -502,6 +503,10 @@ const BreakfastCheckin = () => {
                         style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
                         onClick={goToHome} 
                     />
+                    <img src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Guest" 
+                        style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
+                        onClick={goToRestaurant} 
+                    />     
                     <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" 
                         style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
                         onClick={goToGuest} 

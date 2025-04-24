@@ -104,11 +104,13 @@ const GuestCheckin = () => {
     const [showModal, setShowModal] = useState(false);
     const navigate = useNavigate();
     const [modalGuestName, setModalGuestName] = useState('');
-    const timeoutId = useRef(null); // Thêm useRef ở đây
+    const timeoutId = useRef(null); 
+
 
     const goToHome = () => navigate('/home');
     const goToRestaurant = () => navigate('/restaurant');
     const goToFull = () => navigate('/fullSeat');
+    const goToGuest = () => {navigate('/guest'); };
 
     const handleInputChange = (e) => {
         setRoomNumber(e.target.value);
@@ -120,20 +122,26 @@ const GuestCheckin = () => {
 
     const handleSubmit = async () => {
         const num = parseInt(roomNumber, 10);
+    
+        // Check if the room number is valid
         if (!VALID_ROOMS.includes(num)) {
             setError(TEXTS[language].error_invalid);
+            setRoomNumber(''); // Clear the input if invalid
             setGuestInfo(null);
             setIsConfirming(false);
             setShowModal(false);
             return;
         }
-
+    
+        // Query the database to find the guest info
         const guestsRef = collection(db, "breakfastGuests");
         const q = query(guestsRef, where("roomNumber", "==", num), where("status", "==", "not_arrived"));
         const querySnapshot = await getDocs(q);
-
+    
+        // Check if the room number was found
         if (querySnapshot.empty) {
             setError(TEXTS[language].error_not_found);
+            setRoomNumber(''); // Clear the input if no guest found
             setGuestInfo(null);
             setIsConfirming(false);
             setShowModal(false);
@@ -141,12 +149,12 @@ const GuestCheckin = () => {
             const guestsData = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                guestsData.push({ id: doc.id, ...data, 名前: data.名前 }); 
+                guestsData.push({ id: doc.id, ...data, 名前: data.名前 });
             });
             setGuestInfo(guestsData);
             setIsConfirming(true);
             setError('');
-            setShowModal(false); // Đóng modal nếu đang mở khi chuyển sang bước xác nhận
+            setShowModal(false); // Close the modal if it was open
         }
     };
 
@@ -219,6 +227,11 @@ const GuestCheckin = () => {
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToRestaurant}
                 />
+                                <img
+                    src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Restaurant"
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+                    onClick={goToGuest}
+                />
                 <img
                     src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Full"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
@@ -283,7 +296,7 @@ const GuestCheckin = () => {
                         </div>
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                             <button className="fixed-size-button" onClick={() => setIsConfirming(false)}>
-                                戻る
+                            {TEXTS[language].modal_back}
                             </button>
                             <button className="fixed-size-button" onClick={handleConfirmCheckin}>
                                 {TEXTS[language].button_confirm}

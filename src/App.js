@@ -13,7 +13,9 @@ function App() {
     <div className="App">
       <header className="App-header">
         <Routes>
-          <Route path="/" element={<Navigate to="/home" />} />
+          {/* CHỈNH Ở ĐÂY: chuyển mặc định về /login */}
+          <Route path="/" element={<Navigate to="/login" />} />
+
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/restaurant" element={<ProtectedRoute><BreakfastCheckin /></ProtectedRoute>} />

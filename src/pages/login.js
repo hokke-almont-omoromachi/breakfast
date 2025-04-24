@@ -1,7 +1,10 @@
-// login.js
 import React, { useState } from "react";
 import { auth } from "../firebaseConfig";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  setPersistence,
+  browserSessionPersistence,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
@@ -12,6 +15,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
+      await setPersistence(auth, browserSessionPersistence); // Chỉ giữ session khi tab đang mở
       await signInWithEmailAndPassword(auth, email, password);
       navigate("/home");
     } catch (error) {
@@ -21,7 +25,7 @@ const Login = () => {
   };
 
   return (
-    <div style={{ backgroundColor:'#F2EBE0', padding: "20px" }}>
+    <div style={{ backgroundColor: "#F2EBE0", padding: "20px" }}>
       <form onSubmit={handleLogin}>
         <input
           type="email"

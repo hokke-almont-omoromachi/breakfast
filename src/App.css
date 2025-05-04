@@ -282,3 +282,74 @@ input[type=number]::-webkit-outer-spin-button {
     height: 90px; /* Tăng kích thước ảnh tray */
     width: auto; /* Để giữ tỷ lệ khung hình */
 }
+
+.cancel-button {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  
+  .cancel-button:hover {
+    opacity: 0.8; /* Optional: Add hover effect */
+  }
+
+  .checkin-button {
+  background-color: green;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.checkin-button:hover {
+  opacity: 0.8;
+}
+
+.checkin-button {
+    background-color: green;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  
+.checkin-button:hover {
+    opacity: 0.8;
+  }
+
+.head-table {
+    border: 1.2px solid #c0bebe;
+    padding: 8px;
+    text-align: center;
+    background-color: #E4DFD1;
+  }
+
+.child-table {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+    background-color: #FAF9F6;
+}
+
+.hide-button {
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    margin-top: 0;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    background-color: #CEBFA6;
+    font-size: 16px;
+    color: #fff; /* Đặt màu chữ là trắng để dễ nhìn trên nền nâu */
+  }
+  
+  .hide-button:hover {
+    background-color: #B2A485; /* Thay đổi màu nền khi di chuột vào để có hiệu ứng tương tác */
+  }

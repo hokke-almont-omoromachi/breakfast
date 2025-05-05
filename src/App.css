@@ -295,7 +295,7 @@ input[type=number]::-webkit-outer-spin-button {
     opacity: 0.8; /* Optional: Add hover effect */
   }
 
-  .checkin-button {
+.checkin-button {
   background-color: green;
   color: white;
   border: none;
@@ -307,15 +307,15 @@ input[type=number]::-webkit-outer-spin-button {
   opacity: 0.8;
 }
 
-.checkin-button {
-    background-color: green;
+.waiting-button {
+    background-color: rgb(146, 154, 0);
     color: white;
     border: none;
     padding: 5px 10px;
     cursor: pointer;
   }
   
-.checkin-button:hover {
+.waiting-button:hover {
     opacity: 0.8;
   }
 

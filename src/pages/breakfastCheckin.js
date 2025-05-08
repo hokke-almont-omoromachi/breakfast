@@ -18,10 +18,11 @@ const BreakfastCheckin = () => {
     const [inputList, setInputList] = useState([]);
     const fileInputRef = useRef(null);
     const [nameInput, setNameInput] = useState(''); 
-    const [waitingGuests, setWaitingGuests] = useState([]); // State để lưu danh sách khách đang đợi
-    const [showWaitingTable, setShowWaitingTable] = useState(false); // State để hiển thị/ẩn bảng Waiting
     const [isComposing, setIsComposing] = useState(false);
     const [nameInputValue, setNameInputValue] = useState('');
+    const [waitingGuests, setWaitingGuests] = useState([]);
+    const [notArrivedGuests, setNotArrivedGuests] = useState(0);
+    const [waitingGuestsCount, setWaitingGuestsCount] = useState(0);
     const navigate = useNavigate();
     const goToHome = () => {navigate('/home'); };
     const goToRestaurant = () => navigate('/restaurant');
@@ -30,98 +31,34 @@ const BreakfastCheckin = () => {
 
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
-            query(collection(db, "breakfastGuests"), orderBy("roomNumber")),
+            query(collection(db, "breakfastGuests"), orderBy("roomNumber")), // Keep for guestsData
             (snapshot) => {
                 const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setGuestsData(data);
                 updateGuestStatistics(data);
-            }, (error) => console.error('Data fetch error', error)
+                const newWaitingGuests = data.filter(guest => guest.status === 'waiting');
+                console.log('onSnapshot: newWaitingGuests before set:', newWaitingGuests);
+                setWaitingGuests(newWaitingGuests);
+                console.log('onSnapshot: guestsData updated:', data);
+            },
+            (error) => console.error('Data fetch error', error)
         );
 
+    
         const unsubscribePurchases = onSnapshot(collection(db, "breakfastPurchases"), (snapshot) => {
             const purchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setInputList(purchases);
         }, (error) => console.error('Purchase data fetch error:', error));
-
-        const unsubscribeWaiting = onSnapshot(collection(db, 'waitingGuests'), (snapshot) => {
-            const waitingData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-            setWaitingGuests(waitingData);
-          }, (error) => console.error("Error fetching waiting guests: ", error));
-
+    
         return () => {
             unsubscribeGuests();
             unsubscribePurchases();
-            unsubscribeWaiting(); // Unsubscribe waiting guests
-        };  }, []);
-    
-          // Hàm để chuyển khách vào danh sách Waiting
-  const handleMoveToWaiting = async (guest) => {
-    // Kiểm tra xem khách đã ở trong danh sách Waiting chưa
-    if (waitingGuests.find((wg) => wg.id === guest.id)) {
-      setModalContent({
-        title: "Đã có trong danh sách chờ",
-        message: "Khách này đã có trong danh sách chờ.",
-        buttons: [{ text: "OK", action: () => closeModal() }],
-      });
-      setIsModalOpen(true);
-      return;
-    }
-
-    try {
-      // Add to waitingGuests state
-      setWaitingGuests((prev) => [...prev, guest]);
-
-      // Add to Firestore
-      await setDoc(doc(db, 'waitingGuests', guest.id), guest);
-
-      // Update status in Firestore
-      await setDoc(doc(db, 'breakfastGuests', guest.id), { status: 'waiting' }, { merge: true });
-
-      // Remove from guestsData (optional, if you want to remove from the main list)
-      setGuestsData((prev) => prev.filter((g) => g.id !== guest.id));
-
-      updateGuestStatistics(guestsData.filter((g) => g.id !== guest.id)); //recalculate
-
-    } catch (error) {
-      console.error('Error moving to waiting list:', error);
-      setModalContent({
-        title: "Lỗi",
-        message: "Có lỗi khi chuyển khách vào danh sách chờ.",
-        buttons: [{ text: "OK", action: () => closeModal() }],
-      });
-      setIsModalOpen(true);
-    }
-  };
-
-  // Hàm để chuyển khách từ danh sách Waiting vào bàn
-  const handleCheckInFromWaiting = async (guest) => {
-    try {
-      // Remove from waitingGuests state
-      setWaitingGuests((prev) => prev.filter((g) => g.id !== guest.id));
-
-      // Remove from Firestore
-      await deleteDoc(doc(db, 'waitingGuests', guest.id));
-
-      // Update status to 'arrived' in Firestore
-      await setDoc(doc(db, 'breakfastGuests', guest.id), { status: 'arrived' }, { merge: true });
-
-      // Add to checkedInGuests count (you might need to adjust this logic)
-      setCheckedInGuests((prev) => prev + guest.人数);
-      updateGuestStatistics([...guestsData, guest]); // Include the guest in the update
-
-    } catch (error) {
-      console.error("Error checking in from waiting list: ", error);
-      setModalContent({
-        title: "Lỗi",
-        message: "Có lỗi khi check in khách từ danh sách chờ.",
-        buttons: [{ text: "OK", action: () => closeModal() }],
-      });
-      setIsModalOpen(true);
-    }
-  };
+        };
+    }, []);
 
     const handleCompositionStart = () => {
-        setIsComposing(true); };
+        setIsComposing(true);
+      };
       
     const handleCompositionEnd = (e) => {
         setIsComposing(false);
@@ -130,36 +67,75 @@ const BreakfastCheckin = () => {
         if (/^[A-Za-z\s]+$/.test(value)) {
             const uppercased = value.replace(/[a-zA-Z]/g, (char) => char.toUpperCase());
             setNameInput(uppercased);
-          } else {setNameInput(value); }
-           setNameInputValue('');  };
+          } else {
+            setNameInput(value);
+          }
+      
+        setNameInputValue('');
+      };
 
     const handleInputChange = (e) => {
         if (!isComposing) {
           const value = e.target.value;
           setNameInput(value); 
-        } else {  setNameInputValue(e.target.value);}
+        } else {
+          setNameInputValue(e.target.value);
+        }
       };
 
     const handleInput = async () => {
         try {
             await setDoc(doc(collection(db, "breakfastPurchases")), {
-                roomName: roomName, mealNum: mealNum
+                roomName: roomName,
+                mealNum: mealNum
             });
             setRoomName('');
             setMealNum(1);
         } catch (error) {
-            console.error('Add Data error:', error); }   };
+            console.error('Add Data error:', error);
+        }
+    };
 
     const updateGuestStatistics = (data) => {
         let total = 0;
-        let checkedIn = 0;
+        let notArrived = 0;
+        let arrived = 0;
+        let waiting = 0;
         data.forEach(guest => {
             total += guest.人数 || 0;
             if (guest.status === 'arrived') {
-                checkedIn += guest.人数 || 0;  }
+                arrived += guest.人数 || 0;
+            } else if (guest.status === 'not_arrived') {
+                notArrived += guest.人数 || 0;
+            } else if (guest.status === 'waiting') {
+                waiting += guest.人数 || 0;
+            }
         });
         setTotalGuests(total);
-        setCheckedInGuests(checkedIn);　};
+        setCheckedInGuests(arrived);
+        setNotArrivedGuests(notArrived);
+        setWaitingGuestsCount(waiting);
+    };
+
+    const handleMoveToWaiting = async (guestId) => {
+        try {
+            await setDoc(doc(db, "breakfastGuests", guestId), { status: 'waiting' }, { merge: true });
+            console.log('Firebase updated to waiting for:', guestId);
+            //  DO NOT update waitingGuests here! Let onSnapshot do it.
+        } catch (error) {
+            console.error('Error moving to waiting:', error);
+        }
+    };
+
+    const handleMoveToArrivedFromWaiting = async (guestId) => {
+        try {
+            await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived' }, { merge: true });
+            setWaitingGuests(prevWaitingGuests => prevWaitingGuests.filter(guest => guest.id !== guestId));
+            console.log('Guest removed from waiting:', guestId);
+        } catch (error) {
+            console.error('Error moving from waiting to arrived:', error);
+        }
+    };
 
     const readExcelFile = async (file) => {
         try {
@@ -174,7 +150,9 @@ const BreakfastCheckin = () => {
                 const row = jsonData[i];
                 if (row && row.length > 0) {
                     const rowData = {};
-                    headers.forEach((header, index) => { rowData[header] = row[index] ?? ''; });
+                    headers.forEach((header, index) => {
+                        rowData[header] = row[index] ?? '';
+                    });
 
                     const roomNumberValue = parseInt(rowData["ルーム"]?.toString().trim()) || 0;
                     const numberOfGuests = parseInt(rowData["人数"]) || 0;
@@ -197,8 +175,10 @@ const BreakfastCheckin = () => {
             }
             setGuestsData(formattedData);
             await uploadDataToFirestore(formattedData);
+
         } catch (error) {
-            console.error('Error reading Excel file:', error);  }
+            console.error('Error reading Excel file:', error);
+        }
     };
 
     const readCSVFile = async (file) => {
@@ -217,7 +197,8 @@ const BreakfastCheckin = () => {
                     });
                     jsonData.push(row);
                 } else {
-                    console.warn(`Skipping line ${i + 1} due to inconsistent number of values.`);   }
+                    console.warn(`Skipping line ${i + 1} due to inconsistent number of values.`);
+                }
             }
             const formattedData = jsonData.map(row => {
                 const roomNumberValue = parseInt(row["ルーム"]?.toString().trim());
@@ -232,7 +213,8 @@ const BreakfastCheckin = () => {
                     roomNumber: isNaN(roomNumberValue) ? 0 : roomNumberValue,
                     名前: guestName,
                     人数: numberOfGuests,
-                    status: "not_arrived"};
+                    status: "not_arrived",
+                };
             }).filter(guest => guest.ルーム && guest.人数 > 0);
             setGuestsData(formattedData);
             await uploadDataToFirestore(formattedData);
@@ -246,67 +228,63 @@ const BreakfastCheckin = () => {
             const collectionRef = collection(db, "breakfastGuests");
             await deleteCollectionData(collectionRef);
             for (const guest of data) {
-                await setDoc(doc(collectionRef, guest.id), guest);}
+                await setDoc(doc(collectionRef, guest.id), guest);
+            }
         } catch (error) {
-            console.error('Upload error:', error);}
+            console.error('Upload error:', error);
+        }
     };
 
     const deleteCollectionData = async (collectionRef) => {
         try {
             const snapshot = await getDocs(collectionRef);
             await Promise.all(snapshot.docs.map((doc) => deleteDoc(doc.ref)));
-        } catch (error) { console.error('Delete error:', error); }
+        } catch (error) {
+            console.error('Delete error:', error);
+        }
     };
 
     const handleRoomCheckIn = () => {
         if (!roomNumber.trim()) {
-          setModalContent({
-            title: '朝食未購入',
-            message: '部屋番号を入力して下さい。',
-            buttons: [{ text: '戻る', action: () => closeModal() }],
-          });
-          setIsModalOpen(true);
-          return;
+            setModalContent({
+                title: '朝食未購入',
+                message: '部屋番号を入力して下さい。',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
+            return;
         }
-    
-        const matchingGuests = guestsData.filter((g) => g.ルーム === roomNumber.trim());
-    
+
+    const matchingGuests = guestsData.filter(g => g.ルーム === roomNumber.trim());
+
         if (matchingGuests.length === 0) {
-          setModalContent({
-            title: '朝食未購入',
-            message: 'フロントに申し付けください。',
-            buttons: [{ text: '戻る', action: () => closeModal() }],
-          });
-          setIsModalOpen(true);
-          return;
+            setModalContent({
+                title: '朝食未購入',
+                message: 'フロントに申し付けください。',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
+            return;
         }
-    
+
         setModalContent({
-          title: '確認',
-          message: matchingGuests.map(guest => ({
-            text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
-            id: guest.id,
-            status: guest.status
-          })),
-          buttons: [
-            {
-              text: '一括チェックイン',
-              action: () => handleCheckInAll(matchingGuests),
-              style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
-            },
-            {
-              text: '一括Waiting',
-              action: () => {
-                matchingGuests.forEach(handleMoveToWaiting);
-                closeModal();
-              },
-              style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' }
-            },
-            { text: '戻る', action: () => closeModal() }
-          ]
+            title: '確認',
+            message: matchingGuests.map(guest => ({
+                text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
+                id: guest.id,
+                status: guest.status
+            })),
+            buttons: [
+                {
+                    text: '一括チェックイン',
+                    action: () => handleCheckInAll(matchingGuests),
+                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
+                },
+                { text: '戻る', action: () => closeModal() }
+            ]
         });
         setIsModalOpen(true);
-      };
+    };
 
     const handleNameCheckIn = () => {
         if (!nameInput.trim()) {
@@ -336,38 +314,41 @@ const BreakfastCheckin = () => {
         setModalContent({
             title: '確認',
             message: matchingGuests.map(guest => ({
-              text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
-              id: guest.id,
-              status: guest.status
+                text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
+                id: guest.id,
+                status: guest.status
             })),
             buttons: [
-              {
-                text: '一括チェックイン',
-                action: () => handleCheckInAll(matchingGuests),
-                style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
-              },
-              {
-                text: '一括Waiting',
-                action: () => {
-                  matchingGuests.forEach(handleMoveToWaiting);
-                  closeModal();
+                {
+                    text: '一括チェックイン',
+                    action: () => handleCheckInAll(matchingGuests),
+                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
                 },
-                style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' }
-              },
-              { text: '戻る', action: () => closeModal() }
+                { text: '戻る', action: () => closeModal() }
             ]
-          });
-          setIsModalOpen(true);
-        };
+        });
+        setIsModalOpen(true);
+    };
+
     const handleCheckInGuest = async (guestId, room, count) => {
                try {
                  const guest = guestsData.find((g) => g.id === guestId);
                    if (guest) {
                       await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived' }, { merge: true });
-                      closeModal();
-                    } else {
+                         //setModalContent({
+                         //    title: 'チェックイン',
+                         //    message: `部屋 ${guest.ルーム}　${guest.名前} 様　${guest.人数}名 チェックインしました。`,
+                         //    buttons: [{ text: '戻る', action: () => closeModal() }]
+                         //});
+                      } else {
                         console.warn(`ID ${guestId} is not found`);
-                      }                        
+                         // setModalContent({
+                         //   title: 'チェックイン',
+                         //  message: `部屋 ${room}　${count}名 チェックインしました。`,
+                         //   buttons: [{ text: '戻る', action: () => closeModal() }]
+                         //});
+                      }
+                        // setIsModalOpen(true);
                 } catch (error) {
                    console.error('Check-In status error:', error);
                    setModalContent({
@@ -381,57 +362,73 @@ const BreakfastCheckin = () => {
             };
 
     const handleCheckInAll = async (guests) => {
-                try {
-                  for (const guest of guests) {
-                    if (guest.status !== 'arrived') {
-                      await setDoc(doc(db, "breakfastGuests", guest.id), {
-                        status: 'arrived'
-                      }, { merge: true});
-                    }
-                  }
-                  closeModal(); // Đóng modal sau khi tất cả khách đã được check-in
-                } catch (error) {
-                  console.error('Failed to check in all guests: ', error);
-                  setModalContent({
-                    title: 'Lỗi',
-                    message: '全員チェックインエラー',
-                    buttons: [{
-                      text: '戻る',
-                      action: () => closeModal()
-                    }]
-                  });
-                  setIsModalOpen(true);
-                } finally { setRoomNumber(''); }
-              };
-              
+        try {
+            for (const guest of guests) {
+                if (guest.status !== 'arrived') {
+                    await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived' }, { merge: true });
+                }
+            }
+            if (guests && guests.length > 0) {
+                //setModalContent({
+                //    title: 'チェックイン',
+                //    message: `全員チェックインしました。`,
+                //    buttons: [{ text: '戻る', action: () => closeModal() }]
+                //});
+            } else {
+               // setModalContent({
+                //    title: 'チェックイン',
+                //    message: '全員チェックインしました。',
+                //    buttons: [{ text: '戻る', action: () => closeModal() }]
+                //});
+            }
+            //setIsModalOpen(true);
+        } catch (error) {
+            console.error('Failed to check in all guests: ', error);
+            setModalContent({
+                title: 'Lỗi',
+                message: '全員チェックインエラー',
+                buttons: [{ text: '戻る', action: () => closeModal() }]
+            });
+            setIsModalOpen(true);
+        }
+        setRoomNumber('');
+    };
+
     const handleCancelCheckIn = async (guestId) => {
         const guestToCancel = guestsData.find(guest => guest.id === guestId);
-            if (guestToCancel) {
-                setModalContent({
-                    title: '確認',
-                    message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しますか？`,
-                    buttons: [{
-                      text: 'はい',
-                      action: async () => {
-                        try {
-                          await setDoc(doc(db, "breakfastGuests", guestId), {
-                          status: 'not_arrived'
-                          }, { merge: true });
-                      closeModal(); 
-                        } catch (error) {
-                          console.error('Error cancelling check-in:', error);
-                          setModalContent({
-                            title: 'Lỗi',
-                            message: 'チェックインの取り消しに失敗しました。',
-                            buttons: [{  text: '戻る', action: () => closeModal()  }]
-                        });
-                      setIsModalOpen(true);
+        if (guestToCancel) {
+            setModalContent({
+                title: '確認',
+                message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しますか？`,
+                buttons: [
+                    {
+                        text: 'はい',
+                        action: async () => {
+                            try {
+                                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived' }, { merge: true });
+                                setModalContent({
+                                    title: '取消',
+                                    message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しました。`,
+                                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                                });
+                                setIsModalOpen(true);
+                            } catch (error) {
+                                console.error('Error cancelling check-in:', error);
+                                setModalContent({
+                                    title: 'Lỗi',
+                                    message: 'チェックインの取り消しに失敗しました。',
+                                    buttons: [{ text: '戻る', action: () => closeModal() }]
+                                });
+                                setIsModalOpen(true);
+                            }
                         }
-                      }
-                    }, { text: 'いいえ', action: () => closeModal()}]
-                  });
-                  setIsModalOpen(true);  }
-          };
+                    },
+                    { text: 'いいえ', action: () => closeModal() }
+                ]
+            });
+            setIsModalOpen(true);
+        }
+    };
 
     const handleIndividualCheckIn = (guest) => {
         setModalContent({
@@ -442,10 +439,6 @@ const BreakfastCheckin = () => {
                     text: 'チェックイン',
                     action: () => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)
                 },
-                {
-                    text: 'Waiting',
-                    action: () => handleMoveToWaiting(guest),
-                  },
                 { text: '戻る', action: () => closeModal() }
             ]
         });
@@ -587,7 +580,8 @@ const BreakfastCheckin = () => {
                                                         cursor: 'pointer'
                                                     }}
                                                     onClick={() => handleCancelCheckIn(guest.id)}
-                                                >   CXL
+                                                >
+                                                    CXL
                                                 </button>
                                             </div>
                                         ) : (
@@ -609,10 +603,11 @@ const BreakfastCheckin = () => {
             )}
 
             <p style={{color:'#811121', fontSize:'20px', fontWeight:'bold'}}>本日人数 <span style={{color:'red', fontSize:'30px', fontWeight:'bold'}}>{totalGuests} </span> 名</p>
-            <p>未到着人数 <span style={{fontWeight:'bold'}}>{totalGuests - checkedInGuests}</span> 名　　　　
-               到着済人数 <span style={{fontWeight:'bold'}}>{checkedInGuests} </span>名　　　　
-               Waiting人数 <span style={{ fontWeight: 'bold' }}>{waitingGuests.length}</span> 名
-               </p>
+            <p>
+                未到着人数 <span style={{fontWeight:'bold'}}>{notArrivedGuests}</span> 名　　　　
+                到着済人数 <span style={{fontWeight:'bold'}}>{checkedInGuests} </span>名　　　　
+                Waiting人数 <span style={{fontWeight:'bold'}}>{waitingGuestsCount}</span>名
+            </p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
                 <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -655,8 +650,23 @@ const BreakfastCheckin = () => {
                     <div style={{ width: '100%', textAlign: 'center' }}>
                         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                             <h3 style={{marginTop:'10px'}}>当日朝食購入　（フロント入力用）</h3>
-                             <button className='hide-button'
-                                onClick={togglePurchaseSectionVisibility} >
+                             <button
+                                style={{
+                                    borderRadius: '50%',
+                                    width: '24px',
+                                    height: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginLeft: '8px',
+                                    marginTop:0,
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    padding: 0,
+                                    backgroundColor: '#CEBFA6'
+                                }}
+                                onClick={togglePurchaseSectionVisibility}
+                            >
                                 {isPurchaseSectionVisible ? '−' : '+'}
                             </button>
                         </div>
@@ -686,19 +696,26 @@ const BreakfastCheckin = () => {
                                     <table style={{ width: '100%', borderCollapse: 'collapse', margin: 'auto'}}>
                                         <thead>
                                             <tr>
-                                                <th className='head-table'>部屋番号</th>
-                                                <th className='head-table'>人数</th>
-                                                <th className='head-table'>取消</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {inputList.map((item, index) => (
                                                 <tr key={index}>
-                                                    <td className='child-table'>{item.roomName}</td>
-                                                    <td className='child-table'>{item.mealNum}</td>
-                                                    <td className='child-table'>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.roomName}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.mealNum}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                                         <button
-                                                            className="cancel-button"
+                                                            style={{
+                                                                backgroundColor: 'red',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                padding: '5px 10px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.7em'
+                                                            }}
                                                             onClick={() => handleDeletePurchase(index)}
                                                         >
                                                             X
@@ -714,79 +731,31 @@ const BreakfastCheckin = () => {
                         )}
                     </div>
                 </div>
-
-                <div style={{ marginTop: '20px' }}>
-                    <button onClick={() => setShowWaitingTable(!showWaitingTable)}>
-                        {showWaitingTable ? 'Hide Waiting List' : 'Show Waiting List'}
-                    </button>
-                    {showWaitingTable && (
-                        <div className="waiting-list-container">
-                        <h3>Waiting List</h3>
-                        <table className="waiting-table">
-                            <thead>
-                            <tr>
-                                <th className="waiting-table-header">Số thứ tự</th>
-                                <th className="waiting-table-header">部屋番号</th>
-                                <th className="waiting-table-header">名前</th>
-                                <th className="waiting-table-header">人数</th>
-                                <th className="waiting-table-header">アクション</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {waitingGuests.map((guest, index) => (
-                                <tr key={guest.id}>
-                                <td className="waiting-table-data">{index + 1}</td>
-                                <td className="waiting-table-data">{guest.ルーム}</td>
-                                <td className="waiting-table-data">{guest.名前}</td>
-                                <td className="waiting-table-data">{guest.人数}</td>
-                                <td className="waiting-table-data">
-                                    <button
-                                    className="checkin-button"
-                                    onClick={() => handleCheckInFromWaiting(guest)}
-                                    >
-                                    O
-                                    </button>
-                                </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                        </div>
-                    )}
-                    </div>
             </div>
 
             <div className="guest-lists-container">
                 <div className="guest-list">
-                    <h3>未到着 ({totalGuests - checkedInGuests} 名)</h3>
+                <h3>未到着 ({notArrivedGuests} 名)</h3>
                     <table>
                         <thead>
                             <tr>
-                                <th className='head-table'>部屋番号</th>
-                                <th className='head-table'>名前</th>
-                                <th className='head-table'>人数</th>
-                                <th className='head-table'>アクション</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>部屋番号</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {guestsData.filter(guest => guest.status !== 'arrived').map((guest, index) => (
+                        {guestsData.filter(guest => guest.status === 'not_arrived').map((guest, index) => (
                                 <tr key={index}>
-                                    <td className='child-table'>{guest.ルーム}</td>
-                                    <td className='child-table'>{guest.名前}</td>
-                                    <td className='child-table'>{guest.人数}</td>
-                                    <td className='child-table'>
-                                    <button
-                                        className="checkin-button"
-                                        onClick={() => handleIndividualCheckIn(guest)}
-                                        > O
-                                    </button>
-                                    <button
-                                        className="waiting-button"
-                                        onClick={() => handleMoveToWaiting(guest)}
-                                        >
-                                        W
-                                    </button>
-
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.ルーム}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.名前}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.人数}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                        <button onClick={() => handleIndividualCheckIn(guest)}>O</button>
+                                        <button onClick={() => handleMoveToWaiting(guest.id)}>W</button>
+                                    </td>
                                     </td>
                                 </tr>
                             ))}
@@ -799,28 +768,61 @@ const BreakfastCheckin = () => {
                     <table>
                         <thead>
                             <tr>
-                                <th className='head-table'>部屋番号</th>
-                                <th className='head-table'>名前</th>
-                                <th className='head-table'>人数</th>
-                                <th className='head-table'>取消</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>部屋番号</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>名前</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>人数</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1'}}>取消</th>
                             </tr>
                         </thead>
                         <tbody>
                             {guestsData.filter(guest => guest.status === 'arrived').map((guest, index) => (
                                 <tr key={index}>
-                                    <td className='child-table'>{guest.ルーム}</td>
-                                    <td className='child-table'>{guest.名前}</td>
-                                    <td className='child-table'>{guest.人数}</td>
-                                    <td className='child-table'>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.ルーム}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.名前}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>{guest.人数}</td>
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6'}}>
                                         <button
-                                            className="cancel-button"
+                                            style={{
+                                                backgroundColor: 'red',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '5px 10px',
+                                                cursor: 'pointer'
+                                            }}
                                             onClick={() => handleCancelCheckIn(guest.id)}
-                                            >   X
+                                        >
+                                            X
                                         </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
+                    </table>
+                </div>
+
+                <div className="guest-list">
+                    <h3>Waiting ({waitingGuestsCount} 名)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>STT</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前人数</th>
+                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                             {waitingGuests.map((guest, index) => (
+                                    <tr key={guest.id}>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{index + 1}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{`${guest.名前} (${guest.人数}名)`}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                            <button onClick={() => handleMoveToArrivedFromWaiting(guest.id)}>O</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
                     </table>
                 </div>
             </div>
@@ -839,6 +841,9 @@ const BreakfastCheckin = () => {
             </div>
         </div>
     );
+
+
+
 };
 
 export default BreakfastCheckin;

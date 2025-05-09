@@ -134,15 +134,30 @@ const BreakfastCheckin = () => {
         }
     };
 
-    const handleMoveToArrivedFromWaiting = async (guestId) => {
-        try {
-            await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived' }, { merge: true });
-            setWaitingGuests(prevWaitingGuests => prevWaitingGuests.filter(guest => guest.id !== guestId));
-            console.log('Guest removed from waiting:', guestId);
-        } catch (error) {
-            console.error('Error moving from waiting to arrived:', error);
-        }
-    };
+   const handleMoveToArrivedFromWaiting = (guest) => {
+    setModalContent({
+        title: '確認',
+        message: `部屋 ${guest.ルーム}　${guest.名前}様 を到着済みに変更しますか？`, // Thay đổi message cho phù hợp
+        buttons: [
+            {
+                text: 'はい', // Thay đổi text của nút cho phù hợp
+                action: async () => {
+                    try {
+                        await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived' }, { merge: true });
+                        setWaitingGuests(prevWaitingGuests => prevWaitingGuests.filter(g => g.id !== guest.id));
+                        console.log('Guest moved to arrived:', guest.id);
+                        closeModal(); // Đóng modal sau khi thành công
+                    } catch (error) {
+                        console.error('Error moving to arrived:', error);
+                        // Có thể hiển thị thông báo lỗi cho người dùng nếu cần
+                    }
+                }
+            },
+            { text: 'いいえ', action: () => closeModal() } // Nút để đóng modal mà không thực hiện hành động
+        ]
+    });
+    setIsModalOpen(true);
+};
 
     const readExcelFile = async (file) => {
         try {
@@ -284,8 +299,11 @@ const BreakfastCheckin = () => {
             buttons: [
                 {
                     text: '一括チェックイン',
-                    action: () => handleCheckInAll(matchingGuests),
-                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
+                    action: () => {
+                        handleCheckInAll(matchingGuests);
+                        closeModal(); // Gọi closeModal sau khi handleCheckInAll được thực hiện
+                    },
+                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' }
                 },
                 { text: '戻る', action: () => closeModal() }
             ]
@@ -323,13 +341,19 @@ const BreakfastCheckin = () => {
             message: matchingGuests.map(guest => ({
                 text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
                 id: guest.id,
-                status: guest.status
+                status: guest.status,
+                renderButton: (onClick) => ( // Thêm hàm renderButton
+                    <button onClick={onClick}>チェックイン</button>
+                )
             })),
             buttons: [
                 {
                     text: '一括チェックイン',
-                    action: () => handleCheckInAll(matchingGuests),
-                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' } // Hide if all are checked in
+                    action: () => {
+                        handleCheckInAll(matchingGuests);
+                        closeModal();
+                    },
+                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' },
                 },
                 { text: '戻る', action: () => closeModal() }
             ]
@@ -413,12 +437,14 @@ const BreakfastCheckin = () => {
                         action: async () => {
                             try {
                                 await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived' }, { merge: true });
-                                setModalContent({
-                                    title: '取消',
-                                    message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しました。`,
-                                    buttons: [{ text: '戻る', action: () => closeModal() }]
-                                });
-                                setIsModalOpen(true);
+                                // Loại bỏ phần hiển thị modal thông báo thành công
+                                // setModalContent({
+                                //     title: '取消',
+                                //     message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しました。`,
+                                //     buttons: [{ text: '戻る', action: () => closeModal() }]
+                                // });
+                                // setIsModalOpen(true);
+                                closeModal(); // Tự động đóng modal sau khi hủy thành công
                             } catch (error) {
                                 console.error('Error cancelling check-in:', error);
                                 setModalContent({
@@ -430,7 +456,7 @@ const BreakfastCheckin = () => {
                             }
                         }
                     },
-                    { text: 'いいえ', action: () => closeModal() }
+                    { text: 'いいえ', action: () => closeModal() } // Modal sẽ tự động tắt khi nhấn nút này
                 ]
             });
             setIsModalOpen(true);
@@ -444,7 +470,10 @@ const BreakfastCheckin = () => {
             buttons: [
                 {
                     text: 'チェックイン',
-                    action: () => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)
+                    action: () => {
+                        handleCheckInGuest(guest.id, guest.ルーム, guest.人数);
+                        closeModal(); // Gọi closeModal sau khi handleCheckInGuest được thực hiện
+                    }
                 },
                 { text: '戻る', action: () => closeModal() }
             ]
@@ -564,50 +593,54 @@ const BreakfastCheckin = () => {
                 はなもみ　　朝食チェックイン　　{getCurrentDate()}
             </h2>
             {isModalOpen && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <h3>{modalContent.title}</h3>
-                        {typeof modalContent.message === 'string' ? (
-                            <p dangerouslySetInnerHTML={{ __html: modalContent.message }}></p>
-                        ) : (
-                            Array.isArray(modalContent.message) && modalContent.message.map((guest, index) => {
-                                const isCheckedIn = guest.status === 'arrived';
-                                return (
-                                    <div key={guest.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
-                                        <p>{guest.text}</p>
-                                        {isCheckedIn ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span>チェックイン済</span>
-                                                <button
-                                                    style={{
-                                                        backgroundColor: 'red',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        padding: '5px 10px',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                    onClick={() => handleCancelCheckIn(guest.id)}
-                                                >
-                                                    CXL
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button onClick={() => handleCheckInGuest(guest.id, guest.ルーム, guest.人数)}>チェックイン</button>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        )}
-                        <div className="modal-buttons">
-                            {modalContent.buttons.map((button, index) => (
-                                <button key={index} onClick={button.action} style={button.style}>
-                                    {button.text}
-                                </button>
-                            ))}
+    <div className="modal">
+        <div className="modal-content">
+            <h3>{modalContent.title}</h3>
+            {typeof modalContent.message === 'string' ? (
+                <p dangerouslySetInnerHTML={{ __html: modalContent.message }}></p>
+            ) : (
+                Array.isArray(modalContent.message) && modalContent.message.map((guest, index) => {
+                    const isCheckedIn = guest.status === 'arrived';
+                    return (
+                        <div key={guest.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
+                            <p>{guest.text}</p>
+                            {isCheckedIn ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span>チェックイン済</span>
+                                    <button
+                                        style={{
+                                            backgroundColor: 'red',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '5px 10px',
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => handleCancelCheckIn(guest.id)}
+                                    >
+                                        CXL
+                                    </button>
+                                </div>
+                            ) : (
+                                guest.renderButton(() => { // Gọi hàm renderButton
+                                    handleCheckInGuest(guest.id, guest.ルーム, guest.人数);
+                                    closeModal();
+                                })
+                            )}
                         </div>
-                    </div>
-                </div>
+                    );
+                })
             )}
+            <div className="modal-buttons">
+                {modalContent.buttons.map((button, index) => (
+                    <button key={index} onClick={button.action} style={button.style}>
+                        {button.text}
+                    </button>
+                ))}
+            </div>
+        </div>
+    </div>
+)}
+
 
             <p style={{color:'#811121', fontSize:'20px', fontWeight:'bold'}}>本日人数 <span style={{color:'red', fontSize:'30px', fontWeight:'bold'}}>{totalGuests} </span> 名</p>
             <p>
@@ -819,14 +852,16 @@ const BreakfastCheckin = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {waitingGuests.map((guest, index) => (
-                                <tr key={guest.id}>
-                                    <td>{index + 1}</td>
-                                    <td>{guest.ルーム}</td>
-                                    <td>{`${guest.名前} (${guest.人数}名)`}</td>
-                                    <td><button onClick={() => handleMoveToArrivedFromWaiting(guest.id)}>O</button></td>
-                                </tr>
-                            ))}
+                        {waitingGuests.map((guest, index) => (
+                            <tr key={guest.id}>
+                                <td>{index + 1}</td>
+                                <td>{guest.ルーム}</td>
+                                <td>{`${guest.名前} (${guest.人数}名)`}</td>
+                                <td>
+                                    <button onClick={() => handleMoveToArrivedFromWaiting(guest)}>O</button>
+                                </td>
+                            </tr>
+                        ))}
                             </tbody>
                     </table>
                 </div>

@@ -31,15 +31,17 @@ const BreakfastCheckin = () => {
 
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
-            query(collection(db, "breakfastGuests"), orderBy("roomNumber")), // Keep for guestsData
+            query(collection(db, "breakfastGuests")), // ← bỏ orderBy
             (snapshot) => {
                 const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setGuestsData(data);
                 updateGuestStatistics(data);
-                const newWaitingGuests = data.filter(guest => guest.status === 'waiting');
-                console.log('onSnapshot: newWaitingGuests before set:', newWaitingGuests);
+        
+                const newWaitingGuests = data
+                    .filter(guest => guest.status === 'waiting')
+                    .sort((a, b) => (a.waitingTime || 0) - (b.waitingTime || 0)); // ← sort theo thời gian
+        
                 setWaitingGuests(newWaitingGuests);
-                console.log('onSnapshot: guestsData updated:', data);
             },
             (error) => console.error('Data fetch error', error)
         );
@@ -117,11 +119,15 @@ const BreakfastCheckin = () => {
         setWaitingGuestsCount(waiting);
     };
 
+    
+
     const handleMoveToWaiting = async (guestId) => {
         try {
-            await setDoc(doc(db, "breakfastGuests", guestId), { status: 'waiting' }, { merge: true });
+            await setDoc(doc(db, "breakfastGuests", guestId), {
+                status: 'waiting',
+                waitingTime: Date.now() // 👈 Phải có dòng này
+            }, { merge: true });
             console.log('Firebase updated to waiting for:', guestId);
-            //  DO NOT update waitingGuests here! Let onSnapshot do it.
         } catch (error) {
             console.error('Error moving to waiting:', error);
         }

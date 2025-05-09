@@ -31,17 +31,18 @@ const BreakfastCheckin = () => {
 
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
-            query(collection(db, "breakfastGuests")), // ← bỏ orderBy
+            query(collection(db, "breakfastGuests"), orderBy("roomNumber")),
             (snapshot) => {
                 const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setGuestsData(data);
+                setGuestsData(data); // dùng cho 未到着 và 到着済
                 updateGuestStatistics(data);
         
+                // 👇 Lọc và sort riêng bảng Waiting
                 const newWaitingGuests = data
                     .filter(guest => guest.status === 'waiting')
-                    .sort((a, b) => (a.waitingTime || 0) - (b.waitingTime || 0)); // ← sort theo thời gian
+                    .sort((a, b) => (a.waitingTime || 0) - (b.waitingTime || 0)); // ← sắp xếp theo thời gian nhấn
         
-                setWaitingGuests(newWaitingGuests);
+                setWaitingGuests(newWaitingGuests); // dùng riêng cho bảng Waiting
             },
             (error) => console.error('Data fetch error', error)
         );
@@ -818,16 +819,14 @@ const BreakfastCheckin = () => {
                             </tr>
                         </thead>
                         <tbody>
-                             {waitingGuests.map((guest, index) => (
-                                    <tr key={guest.id}>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{index + 1}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{`${guest.名前} (${guest.人数}名)`}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                            <button onClick={() => handleMoveToArrivedFromWaiting(guest.id)}>O</button>
-                                        </td>
-                                    </tr>
-                                ))}
+                            {waitingGuests.map((guest, index) => (
+                                <tr key={guest.id}>
+                                    <td>{index + 1}</td>
+                                    <td>{guest.ルーム}</td>
+                                    <td>{`${guest.名前} (${guest.人数}名)`}</td>
+                                    <td><button onClick={() => handleMoveToArrivedFromWaiting(guest.id)}>O</button></td>
+                                </tr>
+                            ))}
                             </tbody>
                     </table>
                 </div>

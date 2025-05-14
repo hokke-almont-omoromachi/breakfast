@@ -229,8 +229,8 @@ input[type=number]::-webkit-outer-spin-button {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
     text-align: center;
-    width: 400px; /* Điều chỉnh chiều rộng này */
-    max-width: 90%; /* Đảm bảo không vượt quá chiều rộng màn hình nhỏ */
+    width: 600px; /* Điều chỉnh chiều rộng này */
+    max-width: 95%; /* Đảm bảo không vượt quá chiều rộng màn hình nhỏ */
     opacity: 1; /* Đặt độ mờ ban đầu là 1 (hiển thị đầy đủ) */
     transition: opacity 0.3s ease-in-out; /* Thêm transition cho thuộc tính opacity */
 }

@@ -155,6 +155,7 @@ const GuestCheckin = () => {
             setIsConfirming(true);
             setError('');
             setShowModal(false); // Close the modal if it was open
+            setRoomNumber(''); 
         }
     };
 

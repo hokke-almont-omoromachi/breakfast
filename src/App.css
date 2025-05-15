@@ -213,10 +213,10 @@ th {
   
 
   input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
+    input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+    }
 
 .model {
     position: fixed;
@@ -291,7 +291,7 @@ input[type=number]::-webkit-outer-spin-button {
     cursor: pointer;
   }
   
-  .cancel-button:hover {
+.cancel-button:hover {
     opacity: 0.8; /* Optional: Add hover effect */
   }
 
@@ -300,6 +300,7 @@ input[type=number]::-webkit-outer-spin-button {
   color: white;
   border: none;
   padding: 5px 10px;
+  margin-right: 5px;
   cursor: pointer;
 }
 
@@ -312,10 +313,23 @@ input[type=number]::-webkit-outer-spin-button {
     color: white;
     border: none;
     padding: 5px 10px;
+    margin-right: 5px;
     cursor: pointer;
   }
   
 .waiting-button:hover {
+    opacity: 0.8;
+  }
+
+.invi-button {
+    background-color: rgb(1, 79, 110);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  
+.invi-button:hover {
     opacity: 0.8;
   }
 

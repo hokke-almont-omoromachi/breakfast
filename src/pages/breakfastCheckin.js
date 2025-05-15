@@ -25,6 +25,8 @@ const BreakfastCheckin = () => {
     const [partialCheckinData, setPartialCheckinData] = useState(null);
     const [showPartialModal, setShowPartialModal] = useState(false);
     const [partialArrivedCount, setPartialArrivedCount] = useState(1); 
+    const [showWaitingTable, setShowWaitingTable] = useState(false);
+    const [showBreakfastTable, setShowBreakfastTable] = useState(true);
     const [data, setData] = useState([]);
     const [personalRoomInput, setPersonalRoomInput] = useState('');
     const navigate = useNavigate();
@@ -101,6 +103,7 @@ const BreakfastCheckin = () => {
                             roomNumber: roomNumberValue,
                             名前: guestName,
                             人数: numberOfGuests,
+                            waitingTime: Date.now(), 
                             status: "not_arrived",
                         });
                     }
@@ -538,12 +541,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    const [isPurchaseSectionVisible, setIsPurchaseSectionVisible] = useState(false); 
-
-    const togglePurchaseSectionVisibility = () => {
-        setIsPurchaseSectionVisible(!isPurchaseSectionVisible);
-    };
-
     const handlePartialCheckInClick = (guest) => {
         setPartialCheckinData(guest);
         setPartialArrivedCount(1); 
@@ -709,7 +706,7 @@ const BreakfastCheckin = () => {
             <p>
                 未到着人数 <span style={{ fontWeight: 'bold' }}>{notArrivedGuests}</span> 名　　　　
                 到着済人数 <span style={{ fontWeight: 'bold' }}>{checkedInGuests} </span>名　　　　
-                Waiting人数 <span style={{ fontWeight: 'bold' }}>{waitingGuestsCount}</span>名
+                ウェイティング人数 <span style={{ fontWeight: 'bold' }}>{waitingGuestsCount}</span>名
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
@@ -751,88 +748,133 @@ const BreakfastCheckin = () => {
 
                 <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ width: '100%', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <h3 style={{ marginTop: '10px' }}>当日朝食購入　（フロント入力用）</h3>
-                            <button
-                                style={{
-                                    borderRadius: '50%',
-                                    width: '24px',
-                                    height: '24px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    marginLeft: '8px',
-                                    marginTop: 0,
-                                    cursor: 'pointer',
-                                    border: 'none',
-                                    padding: 0,
-                                    backgroundColor: '#CEBFA6'
-                                }}
-                                onClick={togglePurchaseSectionVisibility}
-                            >
-                                {isPurchaseSectionVisible ? '−' : '+'}
-                            </button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                        <h3 style={{ marginTop: '10px' }}>当日朝食購入　（フロント入力用）</h3>
+                        <button onClick={() => setShowBreakfastTable(!showBreakfastTable)}>
+                            {showBreakfastTable ? '非表示' : '表示'}
+                        </button>
                         </div>
-                        {isPurchaseSectionVisible && (
-                            <>
-                                <div className="input-select-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                    <input
-                                        type="text"
-                                        placeholder="部屋番号"
-                                        value={roomName}
-                                        onChange={(e) => setRoomName(e.target.value)}
-                                        style={{ width: '80px', height: '30px' }}
-                                    />
-                                    <select
-                                        value={mealNum}
-                                        onChange={(e) => setMealNum(Number(e.target.value))}
-                                        style={{ width: '60px', height: '30px' }}
-                                    >
-                                        {[...Array(5).keys()].map(i => (
-                                            <option key={i} value={i + 1}>{i + 1} 名</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleInput}>入力</button>
-                                {inputList.length > 0 && (
-                                    <div style={{ marginTop: '10px', width: '100%' }}>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', margin: 'auto' }}>
-                                            <thead>
-                                                <tr>
-                                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
-                                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {inputList.map((item, index) => (
-                                                    <tr key={index}>
-                                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.roomName}</td>
-                                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.mealNum}</td>
-                                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                                            <button
-                                                                style={{
-                                                                    backgroundColor: 'red',
-                                                                    color: 'white',
-                                                                    border: 'none',
-                                                                    padding: '5px 10px',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '0.7em'
-                                                                }}
-                                                                onClick={() => handleDeletePurchase(index)}
-                                                            >
-                                                                X
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </>
+
+                        {showBreakfastTable && (
+                        <>
+                            <div className="input-select-container"
+                                 style={{display: 'flex', justifyContent: 'center', alignItems: 'center',
+                                         gap: '10px', marginBottom: '10px'}}>
+                            <input
+                                type="text"
+                                placeholder="部屋番号"
+                                value={roomName}
+                                onChange={(e) => setRoomName(e.target.value)}
+                                style={{ width: '80px', height: '30px' }}
+                            />
+                            <select
+                                value={mealNum}
+                                onChange={(e) => setMealNum(Number(e.target.value))}
+                                style={{ width: '60px', height: '30px' }}
+                            >
+                                {[...Array(5).keys()].map((i) => (
+                                <option key={i} value={i + 1}>
+                                    {i + 1} 名
+                                </option>
+                                ))}
+                            </select>
+                            </div>
+
+                            <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleInput}>
+                            入力
+                            </button>
+
+                            {inputList.length > 0 && (
+                            <div style={{ marginTop: '10px', width: '100%' }}>
+                                <table
+                                style={{
+                                    width: '100%',
+                                    borderCollapse: 'collapse',
+                                    margin: 'auto',
+                                }}
+                                >
+                                <thead>
+                                    <tr>
+                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {inputList.map((item, index) => (
+                                    <tr key={index}>
+                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.roomName}</td>
+                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.mealNum}</td>
+                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                        <button
+                                            style={{
+                                            backgroundColor: 'red',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '5px 10px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.7em',
+                                            }}
+                                            onClick={() => handleDeletePurchase(index)}
+                                        >
+                                            X
+                                        </button>
+                                        </td>
+                                    </tr>
+                                    ))}
+                                </tbody>
+                                </table>
+                            </div>
+                            )}
+                        </>
                         )}
                     </div>
+                    </div>
+
+
+            </div>
+
+            <div className="guest-lists-container">       
+                <div className="guest-list">
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
+                        <h3 style={{ margin: 0 }}>ウェイティング ({waitingGuestsCount} 名)</h3>
+                        <button onClick={() => setShowWaitingTable(!showWaitingTable)}>
+                            {showWaitingTable ? "非表示" : "表示"}
+                        </button>
+                    </div>
+                    {showWaitingTable && (
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>STT</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前人数</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {waitingGuests.map((guest, index) => (
+                                    <tr key={guest.id}>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{index + 1}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{`${guest.名前} (${guest.人数}名)`}</td>
+                                         <td　style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                            {guest.waitingTime
+                                                ? new Date(guest.waitingTime).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })
+                                                : ''}
+                                        </td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                            <button className='checkin-button' onClick={() => handleMoveToArrivedFromWaiting(guest)}>O</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
 
@@ -855,9 +897,9 @@ const BreakfastCheckin = () => {
                                     <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
                                     <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
                                     <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                        <button onClick={() => handleIndividualCheckIn(guest)}>O</button>
-                                        <button onClick={() => handleMoveToWaiting(guest.id)}>W</button>
-                                        <button onClick={() => handlePartialCheckInClick(guest)}>B</button>
+                                        <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
+                                        <button className='waiting-button' onClick={() => handleMoveToWaiting(guest.id)}>W</button>
+                                        <button className='invi-button' onClick={() => handlePartialCheckInClick(guest)}>B</button>
                                     </td>
                                 </tr>
                             ))}
@@ -902,31 +944,6 @@ const BreakfastCheckin = () => {
                     </table>
                 </div>
 
-                <div className="guest-list">
-                    <h3>Waiting ({waitingGuestsCount} 名)</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>STT</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前人数</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {waitingGuests.map((guest, index) => (
-                                <tr key={guest.id}>
-                                    <td>{index + 1}</td>
-                                    <td>{guest.ルーム}</td>
-                                    <td>{`${guest.名前} (${guest.人数}名)`}</td>
-                                    <td>
-                                        <button onClick={() => handleMoveToArrivedFromWaiting(guest)}>O</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
             </div>
 
             <div className="input-and-purchase" style={{ marginTop: '20px' }}>

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebaseConfig';
-import {collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy } from 'firebase/firestore';
+import {collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
 import '../App';
+
 
 const BreakfastCheckin = () => {
     const [roomNumber, setRoomNumber] = useState('');
@@ -12,6 +13,7 @@ const BreakfastCheckin = () => {
     const [checkedInGuests, setCheckedInGuests] = useState(0);
     const [roomName, setRoomName] = useState('');
     const [mealNum, setMealNum] = useState(1);
+    const [inputError, setInputError] = useState(''); 
     const [modalContent, setModalContent] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [inputList, setInputList] = useState([]);
@@ -27,6 +29,7 @@ const BreakfastCheckin = () => {
     const [partialArrivedCount, setPartialArrivedCount] = useState(1); 
     const [showWaitingTable, setShowWaitingTable] = useState(false);
     const [showBreakfastTable, setShowBreakfastTable] = useState(true);
+    const [totalPurchasedGuests, setTotalPurchasedGuests] = useState(0);
     const [data, setData] = useState([]);
     const [personalRoomInput, setPersonalRoomInput] = useState('');
     const navigate = useNavigate();
@@ -50,16 +53,37 @@ const BreakfastCheckin = () => {
             }, (error) => console.error('Data fetch error', error)
         );
 
-        const unsubscribePurchases = onSnapshot(collection(db, "breakfastPurchases"), (snapshot) => {
-            const purchases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setInputList(purchases);
-        }, (error) => console.error('Purchase data fetch error:', error));
+        const unsubscribePurchases = onSnapshot(
+            collection(db, 'breakfastPurchases'),
+            (snapshot) => {
+                const purchases = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setInputList(purchases);
+                calculateTotalPurchasedGuests(purchases); // Gọi hàm tính tổng
+            },
+            (error) => console.error('Purchase data fetch error:', error)
+        );
 
         return () => {
             unsubscribeGuests();
             unsubscribePurchases();
         };
     }, []);
+
+    useEffect(() => {
+        // Tính tổng số người khi component mount (lần đầu tiên)
+        calculateTotalPurchasedGuests(inputList);
+    }, [inputList]); // Chạy lại khi inputList thay đổi
+
+    const calculateTotalPurchasedGuests = (purchases) => {
+        const total = purchases.reduce(
+            (sum, purchase) => sum + (purchase.mealNum || 0),
+            0
+        );
+        setTotalPurchasedGuests(total);
+    };
 
     useEffect(() => {
         if (personalRoomInput && data.length > 0) {
@@ -203,11 +227,19 @@ const BreakfastCheckin = () => {
     };
 
     const handleInput = async () => {
+        if (!roomName.trim()) {
+            setInputError('部屋番号を入力して下さい！'); // Set thông báo lỗi
+            return;
+        }
+
+        setInputError(''); // Xóa thông báo lỗi trước đó
+
         try {
-            await setDoc(doc(collection(db, "breakfastPurchases")), {
+            const newItem = {
                 roomName: roomName,
                 mealNum: mealNum,
-            });
+            };
+            await addDoc(collection(db, 'breakfastPurchases'), newItem);
             setRoomName('');
             setMealNum(1);
         } catch (error) {
@@ -251,7 +283,6 @@ const BreakfastCheckin = () => {
         return `${year}年${month}月${day}日`;
     };
 
-
     const handleRoomCheckIn = () => {
         if (!roomNumber.trim()) {
             setModalContent({
@@ -282,7 +313,7 @@ const BreakfastCheckin = () => {
                 id: guest.id,
                 status: guest.status,
                 renderButton: (onClick) => ( // Thêm hàm renderButton
-                    <button onClick={onClick}>チェックイン</button>
+                    <button　className='checkin-button'　onClick={onClick}>O</button>
                 ),
             })),
             buttons: [
@@ -331,7 +362,7 @@ const BreakfastCheckin = () => {
                 id: guest.id,
                 status: guest.status,
                 renderButton: (onClick) => ( 
-                    <button onClick={onClick}>チェックイン</button>
+                    <button　className='checkin-button' onClick={onClick}>O</button>
                 ),
             })),
             buttons: [
@@ -519,8 +550,31 @@ const BreakfastCheckin = () => {
             const snapshot = await getDocs(collection(db, "breakfastPurchases"));
             const docId = snapshot.docs[index].id;
             await deleteDoc(doc(db, "breakfastPurchases", docId));
+            setInputList(prevList => prevList.filter((_, i) => i !== index));
         } catch (error) {
             console.error('Purchase error:', error);
+        }
+    };
+    
+    const handleClearAllPurchases = async () => {
+        try {
+            const collectionRef = collection(db, "breakfastPurchases");
+            const snapshot = await getDocs(collectionRef);
+            console.log("Documents to delete:", snapshot.docs.map(doc => doc.id)); //  Ghi lại các ID
+
+            const deletePromises = snapshot.docs.map(docSnapshot => {
+                const docRef = doc(collectionRef, docSnapshot.id);
+                console.log("Deleting document:", docRef.path); // Ghi lại đường dẫn
+                return deleteDoc(docRef);
+            });
+
+            await Promise.all(deletePromises);
+
+            console.log("All purchases deleted from Firebase.");
+            setInputList([]); // Xóa dữ liệu trong state
+        } catch (error) {
+            console.error('Error clearing all purchases:', error);
+            console.error("Error details:", error);  //  Ghi lại toàn bộ thông tin lỗi
         }
     };
 
@@ -628,20 +682,9 @@ const BreakfastCheckin = () => {
                                         <div key={guest.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
                                             <p>{guest.text}</p>
                                             {isCheckedIn ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
                                                     <span>チェックイン済</span>
-                                                    <button
-                                                        style={{
-                                                            backgroundColor: 'red',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            padding: '5px 10px',
-                                                            cursor: 'pointer',
-                                                        }}
-                                                        onClick={() => handleCancelCheckIn(guest.id)}
-                                                    >
-                                                        CXL
-                                                    </button>
+                                                    <button　className='cancel-button' onClick={() => handleCancelCheckIn(guest.id)}> X</button>
                                                 </div>
                                             ) : (
                                                  guest.renderButton(() => { // Gọi renderButton
@@ -667,13 +710,12 @@ const BreakfastCheckin = () => {
                 {showPartialModal && partialCheckinData && (
                     <div className="modal-overlay">
                         <div className="modal-content">
-                            <h2>部分チェックイン</h2>
-                            <p>部屋: {partialCheckinData.ルーム}</p>
-                            <p>名前: {partialCheckinData.名前}</p>
-                            <p>人数: {partialCheckinData.人数}</p>
-
+                            <h2>バラチェックイン</h2>
+                            <p>部屋: {partialCheckinData.ルーム}　 
+                                {partialCheckinData.名前}様　 
+                                {partialCheckinData.人数}名</p>
                             <label>
-                                到着人数:
+                                到着人数:　
                                 <select
                                     value={partialArrivedCount}
                                     onChange={(e) => setPartialArrivedCount(Number(e.target.value))}
@@ -684,18 +726,18 @@ const BreakfastCheckin = () => {
                                 </select>
                             </label>
 
-                            <div style={{ marginTop: '15px' }}>
+                            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
                                 <button
                                     onClick={() => {
                                         handleCheckInGuestPartial(partialCheckinData, partialArrivedCount);
                                         closePartialModal();
                                     }}
                                 >
-                                    チェックイン
+                                    バラチェックイン
                                 </button>
 
                                 <button onClick={closePartialModal} style={{ marginLeft: '10px' }}>
-                                    Close
+                                    戻る
                                 </button>
                             </div>
                         </div>
@@ -749,90 +791,99 @@ const BreakfastCheckin = () => {
                 <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ width: '100%', textAlign: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                        <h3 style={{ marginTop: '10px' }}>当日朝食購入　（フロント入力用）</h3>
-                        <button onClick={() => setShowBreakfastTable(!showBreakfastTable)}>
-                            {showBreakfastTable ? '非表示' : '表示'}
-                        </button>
+                            <h3 style={{ marginTop: '10px' }}>当日朝食購入 ({totalPurchasedGuests} 名)</h3>
+                            <button onClick={() => setShowBreakfastTable(!showBreakfastTable)}>
+                                {showBreakfastTable ? '非表示' : '表示'}
+                            </button>
                         </div>
 
-                        {showBreakfastTable && (
+                    {showBreakfastTable && (
                         <>
                             <div className="input-select-container"
                                  style={{display: 'flex', justifyContent: 'center', alignItems: 'center',
                                          gap: '10px', marginBottom: '10px'}}>
-                            <input
-                                type="text"
-                                placeholder="部屋番号"
-                                value={roomName}
-                                onChange={(e) => setRoomName(e.target.value)}
-                                style={{ width: '80px', height: '30px' }}
-                            />
-                            <select
-                                value={mealNum}
-                                onChange={(e) => setMealNum(Number(e.target.value))}
-                                style={{ width: '60px', height: '30px' }}
-                            >
-                                {[...Array(5).keys()].map((i) => (
-                                <option key={i} value={i + 1}>
-                                    {i + 1} 名
-                                </option>
-                                ))}
-                            </select>
+                                <input
+                                    type="text"
+                                    placeholder="部屋番号"
+                                    value={roomName}
+                                    onChange={(e) => setRoomName(e.target.value)}
+                                    style={{ width: '80px', height: '30px' }}
+                                />
+                                <select
+                                    value={mealNum}
+                                    onChange={(e) => setMealNum(Number(e.target.value))}
+                                    style={{ width: '60px', height: '30px' }}
+                                >
+                                    {[...Array(5).keys()].map((i) => (
+                                        <option key={i} value={i + 1}>
+                                            {i + 1} 名
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleInput}>
-                            入力
-                            </button>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
+                                <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleInput}>
+                                    入力
+                                </button>
+                                <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleClearAllPurchases}>
+                                    一括取消
+                                </button>
+                            </div>
+
+                             {inputError && (
+                                <p style={{ color: 'red' }}>{inputError}</p>
+                            )}
 
                             {inputList.length > 0 && (
-                            <div style={{ marginTop: '10px', width: '100%' }}>
-                                <table
-                                style={{
-                                    width: '100%',
-                                    borderCollapse: 'collapse',
-                                    margin: 'auto',
-                                }}
-                                >
-                                <thead>
-                                    <tr>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {inputList.map((item, index) => (
-                                    <tr key={index}>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.roomName}</td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.mealNum}</td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                        <button
-                                            style={{
-                                            backgroundColor: 'red',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '5px 10px',
-                                            cursor: 'pointer',
-                                            fontSize: '0.7em',
-                                            }}
-                                            onClick={() => handleDeletePurchase(index)}
-                                        >
-                                            X
-                                        </button>
-                                        </td>
-                                    </tr>
-                                    ))}
-                                </tbody>
-                                </table>
-                            </div>
+                                <div style={{ marginTop: '10px', width: '100%' }}>
+                                    <table
+                                        style={{
+                                            width: '100%',
+                                            borderCollapse: 'collapse',
+                                            margin: 'auto',
+                                        }}
+                                    >
+                                        <thead>
+                                            <tr>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}> 番号 </th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {inputList.map((item, index) => (
+                                                <tr key={item.id}>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{index + 1}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.roomName}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.mealNum}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                                        <button
+                                                            style={{
+                                                                backgroundColor: 'red',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                padding: '5px 10px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.7em',
+                                                            }}
+                                                            onClick={() => handleDeletePurchase(index)}
+                                                        >
+                                                            X
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </>
-                        )}
-                    </div>
-                    </div>
-
-
-            </div>
+                    )}
+                </div>
+                </div>
+        </div>
 
             <div className="guest-lists-container">       
                 <div className="guest-list">
@@ -846,9 +897,10 @@ const BreakfastCheckin = () => {
                         <table>
                             <thead>
                                 <tr>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>STT</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>番号</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前人数</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
                                 </tr>
@@ -858,7 +910,8 @@ const BreakfastCheckin = () => {
                                     <tr key={guest.id}>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{index + 1}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{`${guest.名前} (${guest.人数}名)`}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
                                          <td　style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                             {guest.waitingTime
                                                 ? new Date(guest.waitingTime).toLocaleTimeString([], {

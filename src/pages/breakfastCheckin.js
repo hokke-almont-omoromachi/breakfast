@@ -28,6 +28,8 @@ const BreakfastCheckin = () => {
     const [showPartialModal, setShowPartialModal] = useState(false);
     const [partialArrivedCount, setPartialArrivedCount] = useState(1); 
     const [showWaitingTable, setShowWaitingTable] = useState(false);
+    const [showArriveTable, setShowArriveTable] = useState(false);
+    const [showNotArriveTable, setShowNotArriveTable] = useState(false);
     const [showBreakfastTable, setShowBreakfastTable] = useState(true);
     const [totalPurchasedGuests, setTotalPurchasedGuests] = useState(0);
     const [data, setData] = useState([]);
@@ -48,7 +50,7 @@ const BreakfastCheckin = () => {
                 setData(data); 
                 const newWaitingGuests = data
                     .filter(guest => guest.status === 'waiting')
-                    .sort((a, b) => (a.waitingTime || 0) - (b.waitingTime || 0));
+                    .sort((a, b) => (a.fixedIndex || 0) - (b.fixedIndex || 0)); 
                 setWaitingGuests(newWaitingGuests);
             }, (error) => console.error('Data fetch error', error)
         );
@@ -472,15 +474,30 @@ const BreakfastCheckin = () => {
 
     const handleMoveToWaiting = async (guestId) => {
         try {
+            const snapshot = await getDocs(
+            query(collection(db, "breakfastGuests"))
+            );
+
+            const existingWaiting = snapshot.docs
+            .map(doc => doc.data())
+            .filter(doc => doc.status === 'waiting' && doc.fixedIndex > 0);
+
+            const nextIndex = existingWaiting.length > 0
+            ? Math.max(...existingWaiting.map(d => d.fixedIndex)) + 1
+            : 1;
+
             await setDoc(doc(db, "breakfastGuests", guestId), {
-                status: 'waiting',
-                waitingTime: Date.now(),
+            status: 'waiting',
+            waitingTime: Date.now(),
+            fixedIndex: nextIndex,
             }, { merge: true });
-            console.log('Firebase updated to waiting for:', guestId);
+
+            console.log(`Set fixedIndex = ${nextIndex} for guestId = ${guestId}`);
         } catch (error) {
             console.error('Error moving to waiting:', error);
         }
-    };
+        };
+
 
     const handleMoveToArrivedFromWaiting = (guest) => {
         setModalContent({
@@ -688,8 +705,8 @@ const BreakfastCheckin = () => {
                                                 </div>
                                             ) : (
                                                  guest.renderButton(() => { // Gọi renderButton
-                                    handleCheckInGuest(guest.id, guest.ルーム, guest.人数);
-                                    closeModal();
+                                                handleCheckInGuest(guest.id, guest.ルーム, guest.人数);
+                                                closeModal();
                                 })
                             )}
                                         </div>
@@ -887,7 +904,7 @@ const BreakfastCheckin = () => {
 
             <div className="guest-lists-container">       
                 <div className="guest-list">
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px" }}>
                         <h3 style={{ margin: 0 }}>ウェイティング ({waitingGuestsCount} 名)</h3>
                         <button onClick={() => setShowWaitingTable(!showWaitingTable)}>
                             {showWaitingTable ? "非表示" : "表示"}
@@ -906,9 +923,9 @@ const BreakfastCheckin = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {waitingGuests.map((guest, index) => (
+                                {waitingGuests.map((guest) => (
                                     <tr key={guest.id}>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{index + 1}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.fixedIndex}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
@@ -933,74 +950,87 @@ const BreakfastCheckin = () => {
 
             <div className="guest-lists-container">
                 <div className="guest-list">
-                    <h3>未到着 ({notArrivedGuests} 名)</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {guestsData.filter(guest => guest.status === 'not_arrived').map((guest, index) => (
-                                <tr key={index}>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                        <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
-                                        <button className='waiting-button' onClick={() => handleMoveToWaiting(guest.id)}>W</button>
-                                        <button className='invi-button' onClick={() => handlePartialCheckInClick(guest)}>B</button>
-                                    </td>
+                    <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px" }}>
+                        <h3>未到着 ({notArrivedGuests} 名)</h3>
+                        <button onClick={() => setShowNotArriveTable(!showNotArriveTable)}>
+                            {showNotArriveTable ? "非表示" : "表示"}
+                        </button>
+                    </div>
+                    {showNotArriveTable && (
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {guestsData.filter(guest => guest.status === 'not_arrived').map((guest, index) => (
+                                    <tr key={index}>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                            <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
+                                            <button className='waiting-button' onClick={() => handleMoveToWaiting(guest.id)}>W</button>
+                                            <button className='invi-button' onClick={() => handlePartialCheckInClick(guest)}>B</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 <div className="guest-list">
-                    <h3>到着済 ({checkedInGuests} 名)</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {guestsData.filter(guest => guest.status === 'arrived').map((guest, index) => (
-                                <tr key={index}>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
-                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                        <button
-                                            style={{
-                                                backgroundColor: 'red',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '5px 10px',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={() => handleCancelCheckIn(guest.id)}
-                                        >
-                                            X
-                                        </button>
-                                    </td>
+                    <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px" }}>
+                        <h3>到着済 ({checkedInGuests} 名)</h3>
+                        <button onClick={() => setShowArriveTable(!showArriveTable)}>
+                            {showArriveTable ? "非表示" : "表示"}
+                        </button>
+                    </div>
+                    {showArriveTable && (
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {guestsData.filter(guest => guest.status === 'arrived').map((guest, index) => (
+                                    <tr key={index}>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                            <button
+                                                style={{
+                                                    backgroundColor: 'red',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    padding: '5px 10px',
+                                                    cursor: 'pointer'
+                                                }}
+                                                onClick={() => handleCancelCheckIn(guest.id)}
+                                            >
+                                                X
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
-
             </div>
 
             <div className="input-and-purchase" style={{ marginTop: '20px' }}>
-                <div className="input-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
+                <div className="input-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'left' }}>
                     <h3>朝食リストアップロード</h3>
                     <input
                         type="file"

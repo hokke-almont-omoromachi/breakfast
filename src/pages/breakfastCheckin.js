@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebaseConfig';
-import {collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy, addDoc, where
- } from 'firebase/firestore';
+import {collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
 import '../App';
 
 
@@ -41,51 +40,30 @@ const BreakfastCheckin = () => {
     const goToGuest = () => { navigate('/guest'); };
     const gotoFull = () => { navigate('/fullSeat'); };
 
-useEffect(() => {
-    const unsubscribeGuests = onSnapshot(
-        query(collection(db, "breakfastGuests"), orderBy("roomNumber")),
-        (snapshot) => {
-            const allGuests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setGuestsData(allGuests);
-            updateGuestStatistics(allGuests);
-            setData(allGuests);
-
-            console.log("useEffect - allGuests:", JSON.stringify(allGuests, null, 2));
-
-            allGuests.forEach(guest => {
-                console.log(`useEffect - guest: {
-                    id: ${guest.id},
-                    ルーム: ${guest.ルーム},
-                    人数: ${guest.人数},
-                    status: ${guest.status},
-                    fixedIndex: ${guest.fixedIndex}
-                }`);
-            });
-
-            const waitingGuests = allGuests
-    .filter(guest => guest.status === 'waiting')
-    .sort((a, b) => {
-        const aIndex = a.fixedIndex !== undefined ? a.fixedIndex : Number.MAX_SAFE_INTEGER; // Hoặc một giá trị mặc định khác
-        const bIndex = b.fixedIndex !== undefined ? b.fixedIndex : Number.MAX_SAFE_INTEGER;
-        return aIndex - bIndex;
-    });
-
-            console.log("useEffect - waitingGuests:", JSON.stringify(waitingGuests, null, 2));
-
-            setWaitingGuests(waitingGuests);
-        },
-        (error) => console.error('Data fetch error', error)
-    );
+    useEffect(() => {
+        const unsubscribeGuests = onSnapshot(
+            query(collection(db, "breakfastGuests"), orderBy("roomNumber")),
+            (snapshot) => {
+                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setGuestsData(data);
+                updateGuestStatistics(data);
+                setData(data); 
+                const newWaitingGuests = data
+                    .filter(guest => guest.status === 'waiting')
+                    .sort((a, b) => (a.fixedIndex || 0) - (b.fixedIndex || 0)); 
+                setWaitingGuests(newWaitingGuests);
+            }, (error) => console.error('Data fetch error', error)
+        );
 
         const unsubscribePurchases = onSnapshot(
             collection(db, 'breakfastPurchases'),
             (snapshot) => {
-                const purchases = snapshot.docs.map(doc => ({
+                const purchases = snapshot.docs.map((doc) => ({
                     id: doc.id,
                     ...doc.data(),
                 }));
                 setInputList(purchases);
-                calculateTotalPurchasedGuests(purchases);
+                calculateTotalPurchasedGuests(purchases); // Gọi hàm tính tổng
             },
             (error) => console.error('Purchase data fetch error:', error)
         );
@@ -515,12 +493,11 @@ useEffect(() => {
             }, { merge: true });
 
             console.log(`Set fixedIndex = ${nextIndex} for guestId = ${guestId}`);
-             const updatedGuest = guestsData.find(g => g.id === guestId);
-            console.log("handleMoveToWaiting - Updated data:", updatedGuest);
         } catch (error) {
             console.error('Error moving to waiting:', error);
         }
         };
+
 
     const handleMoveToArrivedFromWaiting = (guest) => {
         setModalContent({
@@ -585,6 +562,17 @@ useEffect(() => {
         setIsModalOpen(true);
     };
 
+    const handleDeletePurchase = async (index) => {
+        try {
+            const snapshot = await getDocs(collection(db, "breakfastPurchases"));
+            const docId = snapshot.docs[index].id;
+            await deleteDoc(doc(db, "breakfastPurchases", docId));
+            setInputList(prevList => prevList.filter((_, i) => i !== index));
+        } catch (error) {
+            console.error('Purchase error:', error);
+        }
+    };
+    
     const handleClearAllPurchases = async () => {
         try {
             const collectionRef = collection(db, "breakfastPurchases");
@@ -629,53 +617,6 @@ useEffect(() => {
         setPartialArrivedCount(1); 
         setShowPartialModal(true);
     };
-
-   const handleMovePurchaseToWaiting = async (index) => {
-    try {
-        console.log("handleMovePurchaseToWaiting called with index:", index);
-        const purchase = inputList[index];
-        if (!purchase) {
-            console.error("Purchase not found at index:", index);
-            return;
-        }
-
-        const collectionRef = collection(db, "breakfastGuests");
-        await addDoc(collectionRef, {
-            ルーム: purchase.roomName,
-            人数: purchase.mealNum,
-            status: "waiting",
-            waitingTime: Date.now(),
-            fixedIndex: await getNextWaitingIndex(),
-            source: "purchase"
-        });
-
-        console.log("Moved to waiting list:", purchase);
-    } catch (error) {
-        console.error("Error moving to waiting list:", error);
-    }
-};
-
-const getNextWaitingIndex = async () => {
-    const snapshot = await getDocs(
-        query(collection(db, "breakfastGuests"), where("status", "==", "waiting"), orderBy("fixedIndex"))
-    );
-    const existingWaiting = snapshot.docs.map(doc => doc.data());
-    const nextIndex = existingWaiting.length > 0
-        ? Math.max(...existingWaiting.map(d => d.fixedIndex || 0)) + 1
-        : 1;
-    return nextIndex;
-};
-
-const handleDeletePurchase = async (index) => {
-    try {
-        const snapshot = await getDocs(collection(db, "breakfastPurchases"));
-        const docId = snapshot.docs[index].id;
-        await deleteDoc(doc(db, "breakfastPurchases", docId));
-        setInputList(prevList => prevList.filter((_, i) => i !== index));
-    } catch (error) {
-        console.error('Purchase error:', error);
-    }
-};
 
     const handleCheckInGuestPartial = async (guest, arrivedCount) => {
         try {
@@ -922,12 +863,10 @@ const handleDeletePurchase = async (index) => {
                                     >
                                         <thead>
                                             <tr>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>番号</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}> 番号 </th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>ウェイティング</th>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>Xóa</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -950,12 +889,6 @@ const handleDeletePurchase = async (index) => {
                                                         >
                                                             X
                                                         </button>
-                                                    </td>
-                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                                        <button onClick={() => handleMovePurchaseToWaiting(index)}>W</button>
-                                                    </td>
-                                                    <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                                        <button onClick={() => handleDeletePurchase(index)}>Xóa</button>
                                                     </td>
                                                 </tr>
                                             ))}

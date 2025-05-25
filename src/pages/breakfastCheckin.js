@@ -13,7 +13,7 @@ const BreakfastCheckin = () => {
     const [checkedInGuests, setCheckedInGuests] = useState(0);
     const [roomName, setRoomName] = useState('');
     const [mealNum, setMealNum] = useState(1);
-    const [inputError, setInputError] = useState(''); 
+    const [inputError, setInputError] = useState('');
     const [modalContent, setModalContent] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [inputList, setInputList] = useState([]);
@@ -24,9 +24,10 @@ const BreakfastCheckin = () => {
     const [waitingGuests, setWaitingGuests] = useState([]);
     const [notArrivedGuests, setNotArrivedGuests] = useState(0);
     const [waitingGuestsCount, setWaitingGuestsCount] = useState(0);
+    const [purchaseWaitingCount, setPurchaseWaitingCount] = useState(0);
     const [partialCheckinData, setPartialCheckinData] = useState(null);
     const [showPartialModal, setShowPartialModal] = useState(false);
-    const [partialArrivedCount, setPartialArrivedCount] = useState(1); 
+    const [partialArrivedCount, setPartialArrivedCount] = useState(1);
     const [showWaitingTable, setShowWaitingTable] = useState(false);
     const [showArriveTable, setShowArriveTable] = useState(false);
     const [showNotArriveTable, setShowNotArriveTable] = useState(false);
@@ -40,30 +41,49 @@ const BreakfastCheckin = () => {
     const goToGuest = () => { navigate('/guest'); };
     const gotoFull = () => { navigate('/fullSeat'); };
 
+    // Danh sách các phòng hợp lệ
+    const VALID_ROOMS = [
+        ...Array.from({ length: 20 }, (_, i) => 301 + i),
+        ...Array.from({ length: 20 }, (_, i) => 401 + i),
+        ...Array.from({ length: 20 }, (_, i) => 501 + i),
+        ...Array.from({ length: 20 }, (_, i) => 601 + i),
+        ...Array.from({ length: 20 }, (_, i) => 701 + i),
+        ...Array.from({ length: 20 }, (_, i) => 801 + i),
+        ...Array.from({ length: 20 }, (_, i) => 901 + i),
+        ...Array.from({ length: 20 }, (_, i) => 1001 + i),
+        ...Array.from({ length: 20 }, (_, i) => 1101 + i),
+        ...Array.from({ length: 20 }, (_, i) => 1201 + i),
+        ...Array.from({ length: 11 }, (_, i) => 1301 + i),
+    ];
+
     useEffect(() => {
         const unsubscribeGuests = onSnapshot(
             query(collection(db, "breakfastGuests"), orderBy("roomNumber")),
             (snapshot) => {
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setGuestsData(data);
-                updateGuestStatistics(data);
-                setData(data); 
-                const newWaitingGuests = data
-                    .filter(guest => guest.status === 'waiting')
-                    .sort((a, b) => (a.fixedIndex || 0) - (b.fixedIndex || 0)); 
-                setWaitingGuests(newWaitingGuests);
-            }, (error) => console.error('Data fetch error', error)
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setGuestsData(data);
+            updateGuestStatistics(data);
+            setData(data);
+            },
+            (error) => console.error('Data fetch error', error)
         );
 
         const unsubscribePurchases = onSnapshot(
             collection(db, 'breakfastPurchases'),
             (snapshot) => {
-                const purchases = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                }));
+                const purchases = snapshot.docs.map((doc, idx) => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        status: data.status || 'purchase_only',
+                        waitingTime: data.waitingTime || null,
+                        fixedIndex: data.fixedIndex || null,
+                        source: 'purchase',
+                    };
+                });
                 setInputList(purchases);
-                calculateTotalPurchasedGuests(purchases); // Gọi hàm tính tổng
+                calculateTotalPurchasedGuests(purchases);
             },
             (error) => console.error('Purchase data fetch error:', error)
         );
@@ -72,12 +92,38 @@ const BreakfastCheckin = () => {
             unsubscribeGuests();
             unsubscribePurchases();
         };
-    }, []);
+        }, []);
+
+        // Trong useEffect có dependency [data, inputList]
+        useEffect(() => {
+            const allWaiting = [
+                ...data.filter(g => g.status === 'waiting').map(g => ({ ...g, source: 'guest' })),
+                ...inputList.filter(p => p.status === 'waiting').map(p => ({ ...p, source: 'purchase' }))
+            ];
+
+            // Số khách "当日" đang chờ
+            const currentPurchaseWaitingCount = inputList
+                .filter(p => p.status === 'waiting')
+                .reduce((sum, p) => sum + (p.mealNum || 0), 0);
+            setPurchaseWaitingCount(currentPurchaseWaitingCount);
+
+            const sortedWaiting = allWaiting.sort((a, b) => (a.fixedIndex || 0) - (b.fixedIndex || 0));
+            setWaitingGuests(sortedWaiting);
+
+            // Tính tổng số khách chờ, KHÔNG BAO GỒM khách "当日" (đã được tính trong purchaseWaitingCount)
+            let nonPurchaseWaitingCount = 0;
+            sortedWaiting.forEach(guest => {
+                if (guest.source === 'guest') {
+                    nonPurchaseWaitingCount += guest.人数 || 0;
+                }
+            });
+            setWaitingGuestsCount(nonPurchaseWaitingCount); // Đổi tên biến để rõ ràng hơn nếu muốn
+        }, [data, inputList]);
+
 
     useEffect(() => {
-        // Tính tổng số người khi component mount (lần đầu tiên)
         calculateTotalPurchasedGuests(inputList);
-    }, [inputList]); // Chạy lại khi inputList thay đổi
+    }, [inputList]);
 
     const calculateTotalPurchasedGuests = (purchases) => {
         const total = purchases.reduce(
@@ -129,7 +175,7 @@ const BreakfastCheckin = () => {
                             roomNumber: roomNumberValue,
                             名前: guestName,
                             人数: numberOfGuests,
-                            waitingTime: Date.now(), 
+                            waitingTime: Date.now(),
                             status: "not_arrived",
                         });
                     }
@@ -140,6 +186,49 @@ const BreakfastCheckin = () => {
 
         } catch (error) {
             console.error('Error reading Excel file:', error);
+        }
+    };
+
+    const getNextWaitingIndex = async () => {
+        const guestsSnapshot = await getDocs(query(collection(db, "breakfastGuests")));
+        const purchaseSnapshot = await getDocs(collection(db, "breakfastPurchases"));
+
+        const allCurrentWaiting = [
+            ...guestsSnapshot.docs.map(doc => doc.data()).filter(g => g.status === 'waiting'),
+            ...purchaseSnapshot.docs.map(doc => doc.data()).filter(p => p.status === 'waiting')
+        ];
+
+        const maxIndex = allCurrentWaiting.reduce((max, item) => {
+            return Math.max(max, item.fixedIndex || 0);
+        }, 0);
+        return maxIndex + 1;
+    };
+
+
+    const handleMovePurchaseToWaiting = async (purchaseId) => {
+        try {
+            // Find the purchase item in inputList to check its current status
+            const purchaseItem = inputList.find(item => item.id === purchaseId);
+
+            if (purchaseItem && purchaseItem.status === 'waiting') {
+                setModalContent({
+                    title: '確認',
+                    message: 'ウェイティングのお客様です。',
+                    buttons: [{ text: '戻る', action: () => closeModal() }],
+                });
+                setIsModalOpen(true);
+                return; // Stop execution if already waiting
+            }
+
+            const nextIndex = await getNextWaitingIndex();
+            await setDoc(doc(db, "breakfastPurchases", purchaseId), {
+                status: 'waiting',
+                waitingTime: Date.now(),
+                fixedIndex: nextIndex,
+            }, { merge: true });
+
+        } catch (error) {
+            console.error('Error moving purchase to waiting:', error);
         }
     };
 
@@ -229,17 +318,30 @@ const BreakfastCheckin = () => {
     };
 
     const handleInput = async () => {
-        if (!roomName.trim()) {
-            setInputError('部屋番号を入力して下さい！'); // Set thông báo lỗi
+        // Lấy giá trị từ input và loại bỏ khoảng trắng
+        const rawRoomName = roomName.trim();
+        const parsedRoomName = parseInt(rawRoomName);
+
+        // Kiểm tra xem input có rỗng không
+        if (!rawRoomName) {
+            setInputError('部屋番号を入力して下さい！');
+            return;
+        }
+        
+        // Kiểm tra xem giá trị có phải là số và có trong VALID_ROOMS không
+        if (isNaN(parsedRoomName) || !VALID_ROOMS.includes(parsedRoomName)) {
+            setInputError('有効な部屋番号を入力して下さい。（例：301-1310）');
             return;
         }
 
-        setInputError(''); // Xóa thông báo lỗi trước đó
+        // Nếu hợp lệ, xóa lỗi và tiếp tục xử lý
+        setInputError('');
 
         try {
             const newItem = {
-                roomName: roomName,
+                roomName: String(parsedRoomName), // Lưu lại dưới dạng chuỗi để giữ định dạng nếu cần
                 mealNum: mealNum,
+                status: 'purchase_only',
             };
             await addDoc(collection(db, 'breakfastPurchases'), newItem);
             setRoomName('');
@@ -253,21 +355,17 @@ const BreakfastCheckin = () => {
         let total = 0;
         let notArrived = 0;
         let arrived = 0;
-        let waiting = 0;
         data.forEach(guest => {
             total += guest.人数 || 0;
             if (guest.status === 'arrived') {
                 arrived += guest.人数 || 0;
             } else if (guest.status === 'not_arrived') {
                 notArrived += guest.人数 || 0;
-            } else if (guest.status === 'waiting') {
-                waiting += guest.人数 || 0;
             }
         });
         setTotalGuests(total);
         setCheckedInGuests(arrived);
         setNotArrivedGuests(notArrived);
-        setWaitingGuestsCount(waiting);
     };
 
     const closeModal = () => {
@@ -314,7 +412,7 @@ const BreakfastCheckin = () => {
                 text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
                 id: guest.id,
                 status: guest.status,
-                renderButton: (onClick) => ( // Thêm hàm renderButton
+                renderButton: (onClick) => (
                     <button　className='checkin-button'　onClick={onClick}>O</button>
                 ),
             })),
@@ -363,7 +461,7 @@ const BreakfastCheckin = () => {
                 text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
                 id: guest.id,
                 status: guest.status,
-                renderButton: (onClick) => ( 
+                renderButton: (onClick) => (
                     <button　className='checkin-button' onClick={onClick}>O</button>
                 ),
             })),
@@ -410,7 +508,7 @@ const BreakfastCheckin = () => {
                 }
             }
             if (guests && guests.length > 0) {
-            } 
+            }
         } catch (error) {
             console.error('Failed to check in all guests: ', error);
             setModalContent({
@@ -435,7 +533,7 @@ const BreakfastCheckin = () => {
                         action: async () => {
                             try {
                                 await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived' }, { merge: true });
-                                closeModal(); 
+                                closeModal();
                             } catch (error) {
                                 console.error('Error cancelling check-in:', error);
                                 setModalContent({
@@ -447,7 +545,7 @@ const BreakfastCheckin = () => {
                             }
                         },
                     },
-                    { text: 'いいえ', action: () => closeModal() }, 
+                    { text: 'いいえ', action: () => closeModal() },
                 ],
             });
             setIsModalOpen(true);
@@ -463,7 +561,7 @@ const BreakfastCheckin = () => {
                     text: 'チェックイン',
                     action: () => {
                         handleCheckInGuest(guest.id, guest.ルーム, guest.人数);
-                        closeModal(); 
+                        closeModal();
                     },
                 },
                 { text: '戻る', action: () => closeModal() },
@@ -474,50 +572,42 @@ const BreakfastCheckin = () => {
 
     const handleMoveToWaiting = async (guestId) => {
         try {
-            const snapshot = await getDocs(
-            query(collection(db, "breakfastGuests"))
-            );
-
-            const existingWaiting = snapshot.docs
-            .map(doc => doc.data())
-            .filter(doc => doc.status === 'waiting' && doc.fixedIndex > 0);
-
-            const nextIndex = existingWaiting.length > 0
-            ? Math.max(...existingWaiting.map(d => d.fixedIndex)) + 1
-            : 1;
-
+            const nextIndex = await getNextWaitingIndex();
             await setDoc(doc(db, "breakfastGuests", guestId), {
-            status: 'waiting',
-            waitingTime: Date.now(),
-            fixedIndex: nextIndex,
+                status: 'waiting',
+                waitingTime: Date.now(),
+                fixedIndex: nextIndex,
             }, { merge: true });
-
-            console.log(`Set fixedIndex = ${nextIndex} for guestId = ${guestId}`);
         } catch (error) {
             console.error('Error moving to waiting:', error);
         }
-        };
+    };
 
 
     const handleMoveToArrivedFromWaiting = (guest) => {
         setModalContent({
             title: '確認',
-            message: `部屋 ${guest.ルーム}　${guest.名前}様 を到着済みに変更しますか？`, 
+            message: `部屋 ${guest.ルーム || guest.roomName}　${guest.名前 || ''}様 を到着済みに変更しますか？`,
             buttons: [
                 {
-                    text: 'はい', 
+                    text: 'はい',
                     action: async () => {
                         try {
-                            await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived' }, { merge: true });
-                            setWaitingGuests(prevWaitingGuests => prevWaitingGuests.filter(g => g.id !== guest.id));
-                            console.log('Guest moved to arrived:', guest.id);
+                            if (guest.source === 'guest') {
+                                await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived' }, { merge: true });
+                            } else if (guest.source === 'purchase') {
+                                // Khi khách "当日" được chuyển từ waiting, status sẽ về lại 'purchase_only'
+                                await setDoc(doc(db, "breakfastPurchases", guest.id), { status: 'purchase_only' }, { merge: true });
+                            }
+
+                            // setWaitingGuests(prev => prev.filter(g => g.id !== guest.id)); // Dòng này không cần vì onSnapshot sẽ tự cập nhật inputList
                             closeModal();
                         } catch (error) {
                             console.error('Error moving to arrived:', error);
                         }
                     },
                 },
-                { text: 'いいえ', action: () => closeModal() }, 
+                { text: 'いいえ', action: () => closeModal() },
             ],
         });
         setIsModalOpen(true);
@@ -562,36 +652,34 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeletePurchase = async (index) => {
+    const handleDeletePurchase = async (purchaseId) => { // Thay đổi ở đây: nhận purchaseId thay vì index
         try {
-            const snapshot = await getDocs(collection(db, "breakfastPurchases"));
-            const docId = snapshot.docs[index].id;
-            await deleteDoc(doc(db, "breakfastPurchases", docId));
-            setInputList(prevList => prevList.filter((_, i) => i !== index));
+            await deleteDoc(doc(db, "breakfastPurchases", purchaseId)); // Sử dụng purchaseId trực tiếp
+            // setInputList đã được cập nhật bởi onSnapshot listener trong useEffect, nên không cần cập nhật state cục bộ ở đây.
         } catch (error) {
             console.error('Purchase error:', error);
         }
     };
-    
+
     const handleClearAllPurchases = async () => {
         try {
             const collectionRef = collection(db, "breakfastPurchases");
             const snapshot = await getDocs(collectionRef);
-            console.log("Documents to delete:", snapshot.docs.map(doc => doc.id)); //  Ghi lại các ID
+            console.log("Documents to delete:", snapshot.docs.map(doc => doc.id));
 
             const deletePromises = snapshot.docs.map(docSnapshot => {
                 const docRef = doc(collectionRef, docSnapshot.id);
-                console.log("Deleting document:", docRef.path); // Ghi lại đường dẫn
+                console.log("Deleting document:", docRef.path);
                 return deleteDoc(docRef);
             });
 
             await Promise.all(deletePromises);
 
             console.log("All purchases deleted from Firebase.");
-            setInputList([]); // Xóa dữ liệu trong state
+            setInputList([]);
         } catch (error) {
             console.error('Error clearing all purchases:', error);
-            console.error("Error details:", error);  //  Ghi lại toàn bộ thông tin lỗi
+            console.error("Error details:", error);
         }
     };
 
@@ -614,7 +702,7 @@ const BreakfastCheckin = () => {
 
     const handlePartialCheckInClick = (guest) => {
         setPartialCheckinData(guest);
-        setPartialArrivedCount(1); 
+        setPartialArrivedCount(1);
         setShowPartialModal(true);
     };
 
@@ -626,17 +714,15 @@ const BreakfastCheckin = () => {
                         ...guest,
                         人数: arrivedCount,
                         status: 'arrived',
-                        id: `${guest.id}-arrived-${Date.now()}`, //  Unique ID for arrived guests
+                        id: `${guest.id}-arrived-${Date.now()}`,
                     };
                     await setDoc(doc(collection(db, "breakfastGuests"), arrivedGuestData.id), arrivedGuestData);
 
-                    //  Update the original entry with the remaining guests
                     await setDoc(doc(db, "breakfastGuests", guest.id), {
                         ...guest,
                         人数: guest.人数 - arrivedCount,
                     }, { merge: true });
                 } else {
-                    //  Check in all guests
                     await setDoc(doc(db, "breakfastGuests", guest.id), {
                         ...guest,
                         status: 'arrived',
@@ -704,7 +790,7 @@ const BreakfastCheckin = () => {
                                                     <button　className='cancel-button' onClick={() => handleCancelCheckIn(guest.id)}> X</button>
                                                 </div>
                                             ) : (
-                                                 guest.renderButton(() => { // Gọi renderButton
+                                                 guest.renderButton(() => {
                                                 handleCheckInGuest(guest.id, guest.ルーム, guest.人数);
                                                 closeModal();
                                 })
@@ -728,11 +814,11 @@ const BreakfastCheckin = () => {
                     <div className="modal-overlay">
                         <div className="modal-content">
                             <h2>バラチェックイン</h2>
-                            <p>部屋: {partialCheckinData.ルーム}　 
-                                {partialCheckinData.名前}様　 
+                            <p>部屋: {partialCheckinData.ルーム}
+                                {partialCheckinData.名前}様
                                 {partialCheckinData.人数}名</p>
                             <label>
-                                到着人数:　
+                                到着人数:
                                 <select
                                     value={partialArrivedCount}
                                     onChange={(e) => setPartialArrivedCount(Number(e.target.value))}
@@ -766,6 +852,7 @@ const BreakfastCheckin = () => {
                 未到着人数 <span style={{ fontWeight: 'bold' }}>{notArrivedGuests}</span> 名　　　　
                 到着済人数 <span style={{ fontWeight: 'bold' }}>{checkedInGuests} </span>名　　　　
                 ウェイティング人数 <span style={{ fontWeight: 'bold' }}>{waitingGuestsCount}</span>名
+                {purchaseWaitingCount > 0 && <span style={{ marginLeft: '10px' }}>当日({purchaseWaitingCount}名)</span>}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
@@ -794,7 +881,7 @@ const BreakfastCheckin = () => {
                         value={isComposing ? nameInputValue : nameInput}
                         onChange={handleInputChange}
                         onCompositionStart={handleCompositionStart}
-                        onCompositionUpdate={handleInputChange} // Có thể cần xử lý khác nếu cần hiển thị gợi ý
+                        onCompositionUpdate={handleInputChange}
                         onCompositionEnd={handleCompositionEnd}
                     />
                     <button
@@ -820,7 +907,7 @@ const BreakfastCheckin = () => {
                                  style={{display: 'flex', justifyContent: 'center', alignItems: 'center',
                                          gap: '10px', marginBottom: '10px'}}>
                                 <input
-                                    type="text"
+                                    type="text" // Đổi type thành text để tránh hành vi mặc định của type="number"
                                     placeholder="部屋番号"
                                     value={roomName}
                                     onChange={(e) => setRoomName(e.target.value)}
@@ -866,7 +953,7 @@ const BreakfastCheckin = () => {
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}> 番号 </th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -876,19 +963,8 @@ const BreakfastCheckin = () => {
                                                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.roomName}</td>
                                                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>{item.mealNum}</td>
                                                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                                        <button
-                                                            style={{
-                                                                backgroundColor: 'red',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                padding: '5px 10px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '0.7em',
-                                                            }}
-                                                            onClick={() => handleDeletePurchase(index)}
-                                                        >
-                                                            X
-                                                        </button>
+                                                        <button  className='waiting-button' onClick={() => handleMovePurchaseToWaiting(item.id)}>W</button>
+                                                        <button  className='cancel-button'  onClick={() => handleDeletePurchase(item.id)}> X</button> {/* Đã sửa ở đây */}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -902,10 +978,13 @@ const BreakfastCheckin = () => {
                 </div>
         </div>
 
-            <div className="guest-lists-container">       
+            <div className="guest-lists-container">
                 <div className="guest-list">
                     <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px" }}>
-                        <h3 style={{ margin: 0 }}>ウェイティング ({waitingGuestsCount} 名)</h3>
+                        <h3 style={{ margin: 0 }}>
+                            ウェイティング ({waitingGuestsCount} 名)
+                            {purchaseWaitingCount > 0 && <span style={{ marginLeft: '10px' }}>当日({purchaseWaitingCount}名)</span>}
+                        </h3>
                         <button onClick={() => setShowWaitingTable(!showWaitingTable)}>
                             {showWaitingTable ? "非表示" : "表示"}
                         </button>
@@ -919,16 +998,16 @@ const BreakfastCheckin = () => {
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {waitingGuests.map((guest) => (
                                     <tr key={guest.id}>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.fixedIndex}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.source === 'guest' ? guest.ルーム : guest.roomName}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.source === 'guest' ? guest.名前 : ''}</td>
+                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.source === 'guest' ? guest.人数 : guest.mealNum}</td>
                                          <td　style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                             {guest.waitingTime
                                                 ? new Date(guest.waitingTime).toLocaleTimeString([], {
@@ -963,7 +1042,7 @@ const BreakfastCheckin = () => {
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>チェックイン</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -998,7 +1077,7 @@ const BreakfastCheckin = () => {
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>取消</th>
+                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                                 </tr>
                             </thead>
                             <tbody>

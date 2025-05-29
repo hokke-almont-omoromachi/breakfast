@@ -14,7 +14,6 @@ const TEXTS = {
         button_confirm: '確認',
         error_invalid: '無効な部屋番号です',
         error_not_found: '該当する部屋番号が見つかりません',
-        room:'部屋番号',
         name: '名前',
         guests: '人数',
         instruction: '下記の内容でチェックインしますか？',
@@ -24,15 +23,7 @@ const TEXTS = {
         modal_welcome: 'いらっしゃいませ！',
         modal_tray: '●　トレーやお箸などは入口にご用意しております。',
         modal_card: '●　お食事がお済みになりましたら、カードの裏側にお願いいたします。',
-        modal_back: '戻る',
-        placeholder: '部屋番号入力',
-        plain_speech_parts: (room, guests) => [
-            'お部屋',
-            String(room),
-            `${guests}名様`,
-            'ご来店です。'
-        ],
-        speech_welcome: 'いらっしゃいませ！',
+        modal_back: '戻る', // Thêm dòng này
     },
     en: {
         title_input: 'Enter your room number',
@@ -41,7 +32,6 @@ const TEXTS = {
         button_confirm: 'Confirm',
         error_invalid: 'Invalid room number',
         error_not_found: 'Room number not found',
-        room:'Room Number',
         name: 'Name',
         guests: 'Guests',
         instruction: 'Do you want to check in with the above information?',
@@ -51,16 +41,7 @@ const TEXTS = {
         modal_welcome: 'Welcome!',
         modal_tray: '●　Trays, chopsticks, and other utensils are available at the entrance.',
         modal_card: '●　Once you have finished your meal, kindly turn the card to the back side.',
-        modal_back: 'Back',
-        placeholder: 'Enter Room Number',
-        // Dùng tiếng Nhật cho plain_speech_parts mặc dù ngôn ngữ là tiếng Anh
-        plain_speech_parts: (room, guests) => [
-            'お部屋', // O-heya
-            String(room),
-            `${guests}名様`, // -mei sama
-            'ご来店です。' // Go-raiten desu.
-        ],
-        speech_welcome: 'いらっしゃいませ！', // Irasshaimase!
+        modal_back: 'Back', // Thêm dòng này
     },
     zh: {
         title_input: '請輸入房號',
@@ -69,7 +50,6 @@ const TEXTS = {
         button_confirm: '確認',
         error_invalid: '房號無效',
         error_not_found: '找不到該房號',
-        room:'房號',
         name: '姓名',
         guests: '人數',
         instruction: '是否使用上述資料辦理入住？',
@@ -79,16 +59,7 @@ const TEXTS = {
         modal_welcome: '歡迎光臨！',
         modal_tray: '●　入口處備有托盤與筷子等用品，歡迎自行取用。',
         modal_card: '●　用餐結束後，煩請將卡片放回背面位置，感謝您的協助。',
-        modal_back: '返回',
-        placeholder: '請輸入房號',
-        // Dùng tiếng Nhật cho plain_speech_parts mặc dù ngôn ngữ là tiếng Trung
-        plain_speech_parts: (room, guests) => [
-            'お部屋',
-            String(room),
-            `${guests}名様`,
-            'ご来店です。'
-        ],
-        speech_welcome: 'いらっしゃいませ！',
+        modal_back: '返回', // Thêm dòng này
     },
     ko: {
         title_input: '객실 번호를 입력하세요',
@@ -97,7 +68,6 @@ const TEXTS = {
         button_confirm: '확인',
         error_invalid: '유효하지 않은 객실 번호입니다',
         error_not_found: '해당 객실 번호를 찾을 수 없습니다',
-        room:'객실 번호',
         name: '이름',
         guests: '인원수',
         instruction: '위 정보로 체크인하시겠습니까?',
@@ -107,16 +77,7 @@ const TEXTS = {
         modal_welcome: '어서 오세요!',
         modal_tray: '●　트레이와 젓가락 등은 입구에 준비해 드렸습니다.',
         modal_card: '●　식사를 마치신 후에는 카드 뒷면에 놓아주시면 감사하겠습니다.',
-        modal_back: '돌아가기',
-        placeholder: '객실 번호 입력',
-        // Dùng tiếng Nhật cho plain_speech_parts mặc dù ngôn ngữ là tiếng Hàn
-        plain_speech_parts: (room, guests) => [
-            'お部屋',
-            String(room),
-            `${guests}名様`,
-            'ご来店です。'
-        ],
-        speech_welcome: 'いらっしゃいませ！',
+        modal_back: '돌아가기', // Thêm dòng này
     },
 };
 
@@ -144,83 +105,12 @@ const GuestCheckin = () => {
     const navigate = useNavigate();
     const [modalGuestName, setModalGuestName] = useState('');
     const timeoutId = useRef(null); 
-    const currentSpeechTimeout = useRef(null); 
 
-    const [voices, setVoices] = useState([]);
-
-    useEffect(() => {
-        if ('speechSynthesis' in window) {
-            const loadVoices = () => {
-                const availableVoices = window.speechSynthesis.getVoices();
-                setVoices(availableVoices);
-            };
-
-            if (window.speechSynthesis.getVoices().length) {
-                loadVoices();
-            } else {
-                window.speechSynthesis.onvoiceschanged = loadVoices;
-            }
-        }
-    }, []); 
 
     const goToHome = () => navigate('/home');
     const goToRestaurant = () => navigate('/restaurant');
     const goToFull = () => navigate('/fullSeat');
     const goToGuest = () => {navigate('/guest'); };
-
-    const speakPartsSequentially = (parts, langCode, delayMs = 1000, speedRate = 1.0, index = 0) => {
-        if (!('speechSynthesis' in window) || index >= parts.length) {
-            return;
-        }
-
-        window.speechSynthesis.cancel(); 
-
-        const utterance = new SpeechSynthesisUtterance(parts[index]);
-        // Bỏ qua utterance.lang = langCode;
-        utterance.rate = speedRate; 
-
-        // Luôn tìm giọng tiếng Nhật
-        const selectedVoice = voices.find(voice =>
-            voice.lang.startsWith('ja') &&
-            (
-                voice.name.includes('Nanami Online (Natural)') || // Thử giọng này trước, thường là tốt
-                voice.default // Cuối cùng, dùng giọng mặc định nếu không tìm thấy cái nào trên
-            )
-        );
-
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            utterance.lang = 'ja'; // Đảm bảo ngôn ngữ của utterance là tiếng Nhật
-            console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang}) for text: "${parts[index]}"`);
-        } else {
-            utterance.lang = 'ja'; // Vẫn đặt lang là 'ja' ngay cả khi dùng giọng mặc định
-            console.warn(`No specific Japanese voice found. Using default voice for: "${parts[index]}" with lang 'ja'.`);
-        }
-
-
-        utterance.onend = () => {
-            console.log(`Finished part ${index + 1}: ${parts[index]}`);
-            if (currentSpeechTimeout.current) {
-                clearTimeout(currentSpeechTimeout.current);
-            }
-            currentSpeechTimeout.current = setTimeout(() => {
-                speakPartsSequentially(parts, langCode, delayMs, speedRate, index + 1);
-            }, delayMs);
-        };
-
-        utterance.onerror = (event) => {
-            console.error('Speech synthesis error:', event.error);
-            if (currentSpeechTimeout.current) {
-                clearTimeout(currentSpeechTimeout.current);
-            }
-            currentSpeechTimeout.current = setTimeout(() => {
-                speakPartsSequentially(parts, langCode, delayMs, speedRate, index + 1);
-            }, delayMs);
-        };
-
-        window.speechSynthesis.speak(utterance);
-    };
-
 
     const handleInputChange = (e) => {
         setRoomNumber(e.target.value);
@@ -228,34 +118,30 @@ const GuestCheckin = () => {
         setGuestInfo(null);
         setIsConfirming(false);
         setShowModal(false);
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            if (currentSpeechTimeout.current) {
-                clearTimeout(currentSpeechTimeout.current);
-                currentSpeechTimeout.current = null;
-            }
-        }
     };
 
     const handleSubmit = async () => {
         const num = parseInt(roomNumber, 10);
     
+        // Check if the room number is valid
         if (!VALID_ROOMS.includes(num)) {
             setError(TEXTS[language].error_invalid);
-            setRoomNumber(''); 
+            setRoomNumber(''); // Clear the input if invalid
             setGuestInfo(null);
             setIsConfirming(false);
             setShowModal(false);
             return;
         }
     
+        // Query the database to find the guest info
         const guestsRef = collection(db, "breakfastGuests");
         const q = query(guestsRef, where("roomNumber", "==", num), where("status", "==", "not_arrived"));
         const querySnapshot = await getDocs(q);
     
+        // Check if the room number was found
         if (querySnapshot.empty) {
             setError(TEXTS[language].error_not_found);
-            setRoomNumber(''); 
+            setRoomNumber(''); // Clear the input if no guest found
             setGuestInfo(null);
             setIsConfirming(false);
             setShowModal(false);
@@ -263,12 +149,12 @@ const GuestCheckin = () => {
             const guestsData = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                guestsData.push({ id: doc.id, ...data }); 
+                guestsData.push({ id: doc.id, ...data, 名前: data.名前 });
             });
             setGuestInfo(guestsData);
             setIsConfirming(true);
             setError('');
-            setShowModal(false); 
+            setShowModal(false); // Close the modal if it was open
             setRoomNumber(''); 
         }
     };
@@ -282,37 +168,24 @@ const GuestCheckin = () => {
                         await updateDoc(guestDocRef, { status: "arrived" });
                     })
                 );
-                const guestNames = guestInfo.map(g => `${g.名前}${language === 'ja' ? ' 様' : ''}`).join(', ');
-                setModalGuestName(guestNames);
+                setModalGuestName(guestInfo.map(g => `${g.名前}${language === 'ja' ? ' 様' : ''}`).join(', '));
                 setShowModal(true);
-
-                const firstGuestRoom = guestInfo[0].ルーム;
-                const totalGuestsInGroup = guestInfo.reduce((sum, g) => sum + g.人数, 0);
-
-                const speechParts = TEXTS[language].plain_speech_parts(firstGuestRoom, totalGuestsInGroup);
-                
-                // Gọi hàm phát âm thanh. LangCode vẫn truyền vào để biết ngôn ngữ hiển thị
-                // nhưng bên trong speakPartsSequentially sẽ ưu tiên giọng Nhật.
-                speakPartsSequentially(speechParts, language, 1.2); 
-
+                // Thiết lập timeout để ẩn modal sau 10 giây
                 timeoutId.current = setTimeout(() => {
-                    handleCloseModal(); 
+                    setShowModal(false);
+                    setRoomNumber('');
+                    setGuestInfo(null);
+                    setIsConfirming(false);
+                    timeoutId.current = null;
                 }, 10000);
             } catch (error) {
                 console.error("Error updating check-in status:", error);
-                alert("チェックインに失敗しました"); 
+                alert("チェックインに失敗しました"); // Thông báo lỗi (có thể tùy chỉnh)
             }
         }
     };
 
     const handleCloseModal = () => {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            if (currentSpeechTimeout.current) {
-                clearTimeout(currentSpeechTimeout.current);
-                currentSpeechTimeout.current = null;
-            }
-        }
         setShowModal(false);
         setRoomNumber('');
         setGuestInfo(null);
@@ -324,20 +197,23 @@ const GuestCheckin = () => {
     };
 
     useEffect(() => {
+        if (showModal) {
+            const timer = setTimeout(() => {
+                setShowModal(false);
+                setRoomNumber('');
+                setGuestInfo(null);
+                setIsConfirming(false);
+                timeoutId.current = null;
+            }, 10000); 
+            return () => clearTimeout(timer);
+        }
         return () => {
             if (timeoutId.current) {
                 clearTimeout(timeoutId.current);
                 timeoutId.current = null;
             }
-            if (currentSpeechTimeout.current) {
-                clearTimeout(currentSpeechTimeout.current);
-                currentSpeechTimeout.current = null;
-            }
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
         };
-    }, []); 
+    }, [showModal]);
 
     return (
         <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '100vh' }}>
@@ -352,7 +228,7 @@ const GuestCheckin = () => {
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToRestaurant}
                 />
-                <img
+                                <img
                     src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Restaurant"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToGuest}
@@ -399,10 +275,6 @@ const GuestCheckin = () => {
                         <div style={{ marginBottom: '20px' }}>
                             {guestInfo.map((guest) => (
                                 <div key={guest.id} style={{ marginBottom: '10px', textAlign: 'left' }}>
-                                    <div style={{ marginLeft: '100px'}}>
-                                        <span>{TEXTS[language].room.toUpperCase()}: 　</span>
-                                        <span style={{ fontWeight: "bold" }}>{guest.ルーム}</span>
-                                    </div>
                                     <div style={{ marginLeft: '100px'}}>
                                         <span>{TEXTS[language].name.toUpperCase()}: 　</span>
                                         <span style={{ fontWeight: "bold" }}>{guest.名前}</span>
@@ -457,15 +329,18 @@ const GuestCheckin = () => {
                         src={`${process.env.PUBLIC_URL}/assets/card change.png`}
                         alt="カード"
                         style={{ 
+
                             verticalAlign: 'middle',
-                            height: 'auto',
-                            maxHeight: '100%',
-                            maxWidth: '100%',
+                            height: 'auto', /* Để chiều cao tự động điều chỉnh theo tỷ lệ */
+                            maxHeight: '100%', /* Không vượt quá chiều cao của phần tử cha */
+                            maxWidth: '100%', /* Không vượt quá chiều rộng của phần tử cha */
                             marginBottom: '10px',
                             display: 'block',
-                        }}
+                         }}
+
+
                     />
-                    <button className="fixed-size-button" onClick={handleCloseModal}>
+                     <button className="fixed-size-button" onClick={handleCloseModal}>
                         {TEXTS[language].modal_back}
                     </button>
                 </div>

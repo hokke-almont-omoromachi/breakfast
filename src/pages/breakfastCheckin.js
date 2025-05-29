@@ -480,6 +480,12 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
+    const [editFixedIndexModal, setEditFixedIndexModal] = useState({
+            open: false,
+            guest: null,
+            newIndex: '',
+            });
+
     const handleCheckInGuest = async (guestId, room, count) => {
         try {
             const guest = guestsData.find((g) => g.id === guestId);
@@ -981,51 +987,105 @@ const BreakfastCheckin = () => {
             <div className="guest-lists-container">
                 <div className="guest-list">
                     <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px" }}>
-                        <h3 style={{ margin: 0 }}>
-                            ウェイティング ({waitingGuestsCount} 名)
-                            {purchaseWaitingCount > 0 && <span style={{ marginLeft: '10px' }}>当日({purchaseWaitingCount}名)</span>}
-                        </h3>
-                        <button onClick={() => setShowWaitingTable(!showWaitingTable)}>
-                            {showWaitingTable ? "非表示" : "表示"}
-                        </button>
+                    <h3 style={{ margin: 0 }}>
+                        ウェイティング ({waitingGuestsCount} 名)
+                        {purchaseWaitingCount > 0 && (
+                        <span style={{ marginLeft: '10px' }}>当日({purchaseWaitingCount}名)</span>
+                        )}
+                    </h3>
+                    <button onClick={() => setShowWaitingTable(!showWaitingTable)}>
+                        {showWaitingTable ? "非表示" : "表示"}
+                    </button>
                     </div>
+
                     {showWaitingTable && (
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>番号</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
-                                    <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>番号</th>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        {
+                            // ✅ Nhóm fixedIndex trước khi map
+                            (() => {
+                            const fixedIndexGroups = waitingGuests.reduce((acc, guest) => {
+                                const index = guest.fixedIndex;
+                                acc[index] = acc[index] ? [...acc[index], guest] : [guest];
+                                return acc;
+                            }, {});
+
+                            return waitingGuests.map((guest) => {
+                                const isGroup = fixedIndexGroups[guest.fixedIndex]?.length > 1;
+                                const rowStyle = {
+                                textAlign: 'center',
+                                backgroundColor: isGroup ? '#D6F0F5' : '#FAF9F6',
+                                };
+                                const indexStyle = {
+                                ...rowStyle,
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                };
+
+                                return (
+                                <tr key={guest.id}>
+                                    <td style={indexStyle}>
+                                    {guest.fixedIndex}
+                                    </td>
+                                    <td style={rowStyle}>
+                                    {guest.source === 'guest' ? guest.ルーム : guest.roomName}
+                                    </td>
+                                    <td style={rowStyle}>
+                                    {guest.source === 'guest' ? guest.名前 : ''}
+                                    </td>
+                                    <td style={rowStyle}>
+                                    {guest.source === 'guest' ? guest.人数 : guest.mealNum}
+                                    </td>
+                                    <td style={rowStyle}>
+                                    {guest.waitingTime
+                                        ? new Date(guest.waitingTime).toLocaleTimeString([], {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        })
+                                        : ''}
+                                    </td>
+                                    <td style={rowStyle}>
+                                    <button
+                                        className='checkin-button'
+                                        onClick={() => handleMoveToArrivedFromWaiting(guest)}
+                                    >
+                                        O
+                                    </button>
+                                    <button
+                                        className='writing-button'
+                                        onClick={() =>
+                                        setEditFixedIndexModal({
+                                            open: true,
+                                            guest: guest,
+                                            newIndex: guest.fixedIndex || '',
+                                        })
+                                        }
+                                    >
+                                        📝
+                                    </button>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {waitingGuests.map((guest) => (
-                                    <tr key={guest.id}>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.fixedIndex}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.source === 'guest' ? guest.ルーム : guest.roomName}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.source === 'guest' ? guest.名前 : ''}</td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.source === 'guest' ? guest.人数 : guest.mealNum}</td>
-                                         <td　style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                            {guest.waitingTime
-                                                ? new Date(guest.waitingTime).toLocaleTimeString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })
-                                                : ''}
-                                        </td>
-                                        <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                            <button className='checkin-button' onClick={() => handleMoveToArrivedFromWaiting(guest)}>O</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                );
+                            });
+                            })()
+                        }
+                        </tbody>
+                    </table>
                     )}
                 </div>
-            </div>
+                </div>
+
 
             <div className="guest-lists-container">
                 <div className="guest-list">
@@ -1107,6 +1167,50 @@ const BreakfastCheckin = () => {
                     )}
                 </div>
             </div>
+
+            {editFixedIndexModal.open && (
+                <div className="modal">
+                    <div className="modal-content">
+                    <h3>番号の編集</h3>
+                    <p>
+                        部屋: {editFixedIndexModal.guest?.ルーム || editFixedIndexModal.guest?.roomName} <br />
+                        現在の番号: {editFixedIndexModal.guest?.fixedIndex}
+                    </p>
+                    <input
+                        type="number"
+                        placeholder="新しい番号を入力"
+                        value={editFixedIndexModal.newIndex}
+                        onChange={(e) =>
+                        setEditFixedIndexModal(prev => ({ ...prev, newIndex: e.target.value }))
+                        }
+                        style={{ textAlign:'center', width: '80px', margin: '10px 0' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                        <button
+                        onClick={async () => {
+                            const { guest, newIndex } = editFixedIndexModal;
+                            if (!isNaN(newIndex) && newIndex !== '') {
+                            const targetCollection = guest.source === 'guest' ? "breakfastGuests" : "breakfastPurchases";
+                            await setDoc(doc(db, targetCollection, guest.id), {
+                                fixedIndex: parseInt(newIndex)
+                            }, { merge: true });
+                            }
+                            setEditFixedIndexModal({ open: false, guest: null, newIndex: '' });
+                        }}
+                        >
+                        保存
+                        </button>
+                        <button
+                        onClick={() =>
+                            setEditFixedIndexModal({ open: false, guest: null, newIndex: '' })
+                        }
+                        >
+                        キャンセル
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                )}
 
             <div className="input-and-purchase" style={{ marginTop: '20px' }}>
                 <div className="input-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'left' }}>

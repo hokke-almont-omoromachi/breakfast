@@ -321,6 +321,19 @@ th {
     opacity: 0.8;
   }
 
+.writing-button {
+    background-color: rgb(29, 175, 248);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    margin-right: 5px;
+    cursor: pointer;
+  }
+  
+.writing-button:hover {
+    opacity: 0.8;
+  }
+
 .invi-button {
     background-color: rgb(1, 79, 110);
     color: white;

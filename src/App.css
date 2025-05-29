@@ -314,6 +314,7 @@ th {
     border: none;
     padding: 5px 10px;
     margin-right: 5px;
+    margin-top: 5px;
     cursor: pointer;
   }
   
@@ -327,6 +328,7 @@ th {
     border: none;
     padding: 5px 10px;
     margin-right: 5px;
+    margin-top: 5px;
     cursor: pointer;
   }
   
@@ -339,6 +341,7 @@ th {
     color: white;
     border: none;
     padding: 5px 10px;
+    margin-top: 5px;
     cursor: pointer;
   }
   

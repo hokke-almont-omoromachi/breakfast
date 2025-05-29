@@ -1072,7 +1072,7 @@ const BreakfastCheckin = () => {
                                         })
                                         }
                                     >
-                                        📝
+                                        S
                                     </button>
                                     </td>
                                 </tr>

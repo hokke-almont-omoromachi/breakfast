@@ -32,6 +32,8 @@
     "web-vitals": "^2.1.4",
     "webpack": "^5.99.2",
     "webpack-cli": "^6.0.1",
+    "workbox-core": "^7.3.0",
+    "workbox-precaching": "^7.3.0",
     "xlsx": "^0.18.5"
   },
   "homepage": "https://hokke-almont-omoromachi.github.io/breakfast",

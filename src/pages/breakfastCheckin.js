@@ -42,7 +42,9 @@ const BreakfastCheckin = () => {
     const gotoFull = () => { navigate('/fullSeat'); };
 
     // New state to keep track of selected guests for batch check-in
-    const [selectedNotArrivedGuests, setSelectedNotArrivedGuests] = useState([]); //
+    const [selectedNotArrivedGuests, setSelectedNotArrivedGuests] = useState([]);
+    // NEW: State for selected waiting guests
+    const [selectedWaitingGuests, setSelectedWaitingGuests] = useState([]);
 
     // Danh sách các phòng hợp lệ
     const VALID_ROOMS = [
@@ -56,7 +58,7 @@ const BreakfastCheckin = () => {
         ...Array.from({ length: 20 }, (_, i) => 1001 + i),
         ...Array.from({ length: 20 }, (_, i) => 1101 + i),
         ...Array.from({ length: 20 }, (_, i) => 1201 + i),
-        ...Array.from({ length: 11 }, (_, i) => 1301 + i),
+        ...Array.from({ length: 10 }, (_, i) => 1301 + i),
     ];
 
     useEffect(() => {
@@ -330,7 +332,7 @@ const BreakfastCheckin = () => {
             setInputError('部屋番号を入力して下さい！');
             return;
         }
-        
+
         // Kiểm tra xem giá trị có phải là số và có trong VALID_ROOMS không
         if (isNaN(parsedRoomName) || !VALID_ROOMS.includes(parsedRoomName)) {
             setInputError('有効な部屋番号を入力して下さい。（例：301-1310）');
@@ -635,26 +637,52 @@ const BreakfastCheckin = () => {
     };
 
 
-    const handleMoveToArrivedFromWaiting = (guest) => {
+    const handleMoveToArrivedFromWaiting = async (guest) => {
+        try {
+            if (guest.source === 'guest') {
+                await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived' }, { merge: true });
+            } else if (guest.source === 'purchase') {
+                // Khi khách "当日" được chuyển từ waiting, status sẽ về lại 'purchase_only'
+                await setDoc(doc(db, "breakfastPurchases", guest.id), { status: 'purchase_only' }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Error moving to arrived:', error);
+        }
+    };
+
+    // NEW: Handle batch check-in for selected waiting guests
+    const handleBatchCheckInWaiting = async () => {
+        if (selectedWaitingGuests.length === 0) {
+            setModalContent({
+                title: '確認',
+                message: 'チェックインするウェイティングゲストを選択してください。',
+                buttons: [{ text: '戻る', action: () => closeModal() }],
+            });
+            setIsModalOpen(true);
+            return;
+        }
+
         setModalContent({
-            title: '確認',
-            message: `部屋 ${guest.ルーム || guest.roomName}　${guest.名前 || ''}様 を到着済みに変更しますか？`,
+            title: '一括チェックイン確認',
+            message: `選択された ${selectedWaitingGuests.length} 件のウェイティングゲストをチェックインしますか？`,
             buttons: [
                 {
                     text: 'はい',
                     action: async () => {
                         try {
-                            if (guest.source === 'guest') {
-                                await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived' }, { merge: true });
-                            } else if (guest.source === 'purchase') {
-                                // Khi khách "当日" được chuyển từ waiting, status sẽ về lại 'purchase_only'
-                                await setDoc(doc(db, "breakfastPurchases", guest.id), { status: 'purchase_only' }, { merge: true });
+                            for (const guest of selectedWaitingGuests) {
+                                await handleMoveToArrivedFromWaiting(guest); // Reuse the existing function
                             }
-
-                            // setWaitingGuests(prev => prev.filter(g => g.id !== guest.id)); // Dòng này không cần vì onSnapshot sẽ tự cập nhật inputList
+                            setSelectedWaitingGuests([]); // Clear selection after batch check-in
                             closeModal();
                         } catch (error) {
-                            console.error('Error moving to arrived:', error);
+                            console.error('Error during batch check-in for waiting guests:', error);
+                            setModalContent({
+                                title: 'Lỗi',
+                                message: 'ウェイティングゲストの一括チェックイン中にエラーが発生しました。',
+                                buttons: [{ text: '戻る', action: () => closeModal() }],
+                            });
+                            setIsModalOpen(true);
                         }
                     },
                 },
@@ -663,6 +691,7 @@ const BreakfastCheckin = () => {
         });
         setIsModalOpen(true);
     };
+
 
     const handleRefresh = async () => {
         setModalContent({
@@ -808,6 +837,19 @@ const BreakfastCheckin = () => {
             }
         });
     };
+
+    // NEW: Handle checkbox change for individual guests in 'waiting' table
+    const handleWaitingCheckboxChange = (guest) => {
+        setSelectedWaitingGuests(prevSelected => {
+            const guestIdentifier = guest.id; // Use guest.id as the identifier
+            if (prevSelected.some(g => g.id === guestIdentifier)) {
+                return prevSelected.filter(g => g.id !== guestIdentifier);
+            } else {
+                return [...prevSelected, guest];
+            }
+        });
+    };
+
 
     return (
         <div className="checkin-container" style={{ backgroundColor: '#F2EBE0' }}>
@@ -1052,12 +1094,36 @@ const BreakfastCheckin = () => {
                     <button onClick={() => setShowWaitingTable(!showWaitingTable)}>
                         {showWaitingTable ? "非表示" : "表示"}
                     </button>
+                    {/* NEW: Batch Check-in Button for ウェイティング */}
+                    {showWaitingTable && (
+                        <button
+                            style={{ marginLeft: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' , height:'39px' }}
+                            onClick={handleBatchCheckInWaiting}
+                            disabled={selectedWaitingGuests.length === 0}
+                        >
+                            一括チェックイン
+                        </button>
+                    )}
                     </div>
 
                     {showWaitingTable && (
                     <table>
                         <thead>
                         <tr>
+                            {/* NEW: Checkbox column header for waiting table */}
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>
+                                <input
+                                    type="checkbox"
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedWaitingGuests(waitingGuests); // Select all waiting guests
+                                        } else {
+                                            setSelectedWaitingGuests([]); // Deselect all
+                                        }
+                                    }}
+                                    checked={selectedWaitingGuests.length === waitingGuests.length && waitingGuests.length > 0}
+                                />
+                            </th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>番号</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
@@ -1091,6 +1157,14 @@ const BreakfastCheckin = () => {
 
                                 return (
                                 <tr key={guest.id}>
+                                    {/* NEW: Checkbox for each waiting guest row */}
+                                    <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedWaitingGuests.some(g => g.id === guest.id)}
+                                            onChange={() => handleWaitingCheckboxChange(guest)}
+                                        />
+                                    </td>
                                     <td style={indexStyle}>
                                     {guest.fixedIndex}
                                     </td>
@@ -1150,12 +1224,12 @@ const BreakfastCheckin = () => {
                         <button onClick={() => setShowNotArriveTable(!showNotArriveTable)}>
                             {showNotArriveTable ? "非表示" : "表示"}
                         </button>
-                        {/* New Batch Check-in Button for 未到着 */} {/* */}
+                        {/* New Batch Check-in Button for 未到着 */}
                         {showNotArriveTable && (
                             <button
                                 style={{ marginLeft: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' , height:'39px' }}
                                 onClick={handleBatchCheckInNotArrived}
-                                disabled={selectedNotArrivedGuests.length === 0} // Disable if no guests are selected
+                                disabled={selectedNotArrivedGuests.length === 0}
                             >
                                 一括チェックイン
                             </button>
@@ -1177,7 +1251,7 @@ const BreakfastCheckin = () => {
                                             }}
                                             checked={selectedNotArrivedGuests.length === guestsData.filter(guest => guest.status === 'not_arrived').length && guestsData.filter(guest => guest.status === 'not_arrived').length > 0}
                                         />
-                                    </th> {/* New column for checkboxes */} {/* */}
+                                    </th> {/* New column for checkboxes */}
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
@@ -1186,14 +1260,14 @@ const BreakfastCheckin = () => {
                             </thead>
                             <tbody>
                                 {guestsData.filter(guest => guest.status === 'not_arrived').map((guest, index) => (
-                                    <tr key={guest.id}> {/* Changed key to guest.id for better stability */}
+                                    <tr key={guest.id}>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                             <input
                                                 type="checkbox"
                                                 checked={selectedNotArrivedGuests.includes(guest.id)}
                                                 onChange={() => handleCheckboxChange(guest.id)}
                                             />
-                                        </td> {/* Checkbox for each row */} {/* */}
+                                        </td> {/* Checkbox for each row */}
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>

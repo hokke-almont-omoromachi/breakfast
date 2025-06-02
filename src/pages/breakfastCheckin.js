@@ -1156,7 +1156,7 @@ const BreakfastCheckin = () => {
                     onClick={handleBatchCheckInWaiting}
                     disabled={selectedWaitingGuests.length === 0}
                     // Giữ marginLeft nếu muốn khoảng cách ban đầu trên màn hình lớn
-                    style={{ marginLeft: '10px' }}
+                    style={{ marginLeft: '10px', backgroundColor: "green"}}
                 >
                     一括チェックイン
                 </button>
@@ -1165,7 +1165,7 @@ const BreakfastCheckin = () => {
                     <button
                         className="start-btn"
                         onClick={handleSetWaitingStartTime}
-                        style={{ backgroundColor: waitingGlobalStartTime ? '#dc3545' : '#17a2b8' }} // Giữ màu động
+                        style={{ backgroundColor: waitingGlobalStartTime ? '#dc3545' : '#ffc107' }} // Giữ màu động
                     >
                         スタート
                     </button>
@@ -1315,6 +1315,7 @@ const BreakfastCheckin = () => {
                                 className="batch-checkin-btn"
                                 onClick={handleBatchCheckInNotArrived}
                                 disabled={selectedNotArrivedGuests.length === 0}
+                                style={{backgroundColor: "green"}}
                             >
                                 一括チェックイン
                             </button>

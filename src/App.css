@@ -416,39 +416,29 @@ th {
     border-radius: 8px;
     width: 450px;
 }
-
 .batch-checkin-btn, .start-btn, .end-btn {
     color: white;
     border: none;
-    padding: 5px 10px; /* Padding mặc định cho màn hình lớn */
+    padding: 5px 10px;
     cursor: pointer;
-    height: 39px;    /* Chiều cao mặc định */
-    font-size: 16px; /* Kích thước font mặc định */
-    /* Các style khác nếu có */
+    /* height: 39px; */ /* <-- BỎ DÒNG NÀY ĐI */
+    min-height: 39px; /* <-- HOẶC THAY BẰNG min-height */
+    font-size: 16px;
+    box-sizing: border-box; /* Quan trọng để padding được tính vào kích thước tổng */
+    /* Đảm bảo không có white-space: nowrap; ở đây nếu có */
 }
 
-/* Quy tắc cho màn hình điện thoại (Media Query) */
 @media (max-width: 600px) {
-    /* Điều chỉnh kích thước và padding cho các nút này */
     .batch-checkin-btn,
     .start-btn,
     .end-btn {
-        padding: 3px 6px;   /* Giảm padding để chữ có nhiều không gian hơn */
-        font-size: 13px;    /* Giảm kích thước font chữ */
-        height: 30px;       /* Giảm chiều cao của nút */
-        white-space: nowrap; /* Đảm bảo chữ không xuống dòng trong nút */
-        min-width: 0;       /* Đảm bảo nút không bị ép bởi min-width mặc định */
+        padding: 3px 6px;
+        font-size: 13px;
+        /* height: 30px; */ /* <-- BỎ DÒNG NÀY ĐI */
+        min-height: 30px; /* <-- HOẶC THAY BẰNG min-height */
+        min-width: 0;
+        /* Đảm bảo không có white-space: nowrap; ở đây nếu có */
     }
 
-    /* Điều chỉnh khoảng cách giữa các phần tử trong div cha (nếu cần) */
-    .guest-list > div { /* Đây là div chứa h3, button 非表示, và các nút checkin/start/end */
-        gap: 5px; /* Giảm khoảng cách giữa các phần tử */
-        /* Nếu bạn đã thêm flexWrap: 'wrap' cho div này, nó sẽ tự động xuống dòng */
-    }
-
-    /* Điều chỉnh kích thước hiển thị thời gian */
-    .waiting-time-display {
-        font-size: 12px; /* Giảm kích thước font của thời gian */
-        margin-left: 2px; /* Giảm khoảng cách nếu cần */
-    }
+    /* ... các style khác ... */
 }

@@ -1103,11 +1103,10 @@ const BreakfastCheckin = () => {
                                         }}
                                     >
                                         <thead>
-                                            <tr>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}> 番号 </th>
+                                            <tr><th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}> 番号 </th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>購入時</th> {/* <-- THÊM DÒNG NÀY */}
+                                                <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>購入時</th>
                                                 <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                                             </tr>
                                         </thead>
@@ -1153,33 +1152,37 @@ const BreakfastCheckin = () => {
         {showWaitingTable && (
             <>
                 <button
-                    style={{ marginLeft: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' , height:'39px' }}
+                    className="batch-checkin-btn"
                     onClick={handleBatchCheckInWaiting}
                     disabled={selectedWaitingGuests.length === 0}
+                    // Giữ marginLeft nếu muốn khoảng cách ban đầu trên màn hình lớn
+                    style={{ marginLeft: '10px' }}
                 >
                     一括チェックイン
                 </button>
-                {/* NEW: Thêm một div bọc cho nút Start/End và áp dụng margin-left: auto */}
+
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <button
-                        style={{ backgroundColor: waitingGlobalStartTime ? '#dc3545' : '#ffc107', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer', height: '39px' }}
+                        className="start-btn"
                         onClick={handleSetWaitingStartTime}
+                        style={{ backgroundColor: waitingGlobalStartTime ? '#dc3545' : '#17a2b8' }} // Giữ màu động
                     >
                         スタート
                     </button>
                     {waitingGlobalStartTime && (
-                        <span style={{ marginLeft: '5px', fontSize: '14px' }}>
+                        <span className="waiting-time-display">
                             {new Date(waitingGlobalStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     )}
                     <button
-                        style={{ backgroundColor: waitingGlobalEndTime ? '#dc3545' : '#ffc107', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer', height: '39px' }}
+                        className="end-btn"
                         onClick={handleSetWaitingEndTime}
+                        style={{ backgroundColor: waitingGlobalEndTime ? '#dc3545' : '#ffc107' }} // Giữ màu động
                     >
                         終了
                     </button>
                     {waitingGlobalEndTime && (
-                        <span style={{ marginLeft: '5px', fontSize: '14px' }}>
+                        <span className="waiting-time-display">
                             {new Date(waitingGlobalEndTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     )}
@@ -1301,7 +1304,7 @@ const BreakfastCheckin = () => {
 
             <div className="guest-lists-container">
                 <div className="guest-list">
-                    <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px", flexWrap: 'wrap'}}>
                         <h3>未到着 ({notArrivedGuests} 名)</h3>
                         <button onClick={() => setShowNotArriveTable(!showNotArriveTable)}>
                             {showNotArriveTable ? "非表示" : "表示"}
@@ -1309,7 +1312,7 @@ const BreakfastCheckin = () => {
                         {/* New Batch Check-in Button for 未到着 */}
                         {showNotArriveTable && (
                             <button
-                                style={{ marginLeft: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer' , height:'39px' }}
+                                className="batch-checkin-btn"
                                 onClick={handleBatchCheckInNotArrived}
                                 disabled={selectedNotArrivedGuests.length === 0}
                             >

@@ -60,7 +60,6 @@ const BreakfastCheckin = () => {
     ];
 
     useEffect(() => {
-          // Listener for breakfastGuests collection
         const unsubscribeGuests = onSnapshot(
             query(collection(db, "breakfastGuests"), orderBy("roomNumber")),
             (snapshot) => {
@@ -73,7 +72,7 @@ const BreakfastCheckin = () => {
         );
 
         const unsubscribePurchases = onSnapshot(
-            query(collection(db, 'breakfastPurchases'), orderBy("purchaseTime")), // <-- THÊM orderBy("purchaseTime")
+            query(collection(db, 'breakfastPurchases'), orderBy("purchaseTime")), 
             (snapshot) => {
                 const purchases = snapshot.docs.map((doc, idx) => {
                     const data = doc.data();
@@ -84,7 +83,7 @@ const BreakfastCheckin = () => {
                         waitingTime: data.waitingTime || null,
                         fixedIndex: data.fixedIndex || null,
                         source: 'purchase',
-                        purchaseTime: data.purchaseTime || null, // <-- Đảm bảo lấy purchaseTime
+                        purchaseTime: data.purchaseTime || null, 
                     };
                 });
                 setInputList(purchases);
@@ -93,16 +92,14 @@ const BreakfastCheckin = () => {
             (error) => console.error('Purchase data fetch error:', error)
         );
 
-        // NEW: Listener for global waiting times from appSettings
         const unsubscribeGlobalTimes = onSnapshot(
-            doc(db, "appSettings", "waitingTimes"), // Assuming a single document for global settings
+            doc(db, "appSettings", "waitingTimes"),
             (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
                     setWaitingGlobalStartTime(data.startTime || null);
                     setWaitingGlobalEndTime(data.endTime || null);
                 } else {
-                    // If the document doesn't exist, initialize times to null
                     setWaitingGlobalStartTime(null);
                     setWaitingGlobalEndTime(null);
                 }
@@ -114,28 +111,24 @@ const BreakfastCheckin = () => {
         return () => {
             unsubscribeGuests();
             unsubscribePurchases();
-            unsubscribeGlobalTimes(); // Clean up global waiting times listener
+            unsubscribeGlobalTimes(); 
         };
         }, []);
 
-        // Effect to update waiting guests list and counts
         useEffect(() => {
             const allWaiting = [
                 ...data.filter(g => g.status === 'waiting').map(g => ({ ...g, source: 'guest' })),
                 ...inputList.filter(p => p.status === 'waiting').map(p => ({ ...p, source: 'purchase' }))
             ];
 
-            // Calculate current "当日" (same-day) waiting guests count
             const currentPurchaseWaitingCount = inputList
                 .filter(p => p.status === 'waiting')
                 .reduce((sum, p) => sum + (p.mealNum || 0), 0);
             setPurchaseWaitingCount(currentPurchaseWaitingCount);
 
-            // Sort waiting guests by fixedIndex
             const sortedWaiting = allWaiting.sort((a, b) => (a.fixedIndex || 0) - (b.fixedIndex || 0));
             setWaitingGuests(sortedWaiting);
 
-            // Calculate total non-purchase waiting guests count
             let nonPurchaseWaitingCount = 0;
             sortedWaiting.forEach(guest => {
                 if (guest.source === 'guest') {
@@ -145,13 +138,10 @@ const BreakfastCheckin = () => {
             setWaitingGuestsCount(nonPurchaseWaitingCount);
         }, [data, inputList]);
 
-
-    // Effect to calculate total purchased guests
     useEffect(() => {
         calculateTotalPurchasedGuests(inputList);
     }, [inputList]);
 
-    // Function to calculate total guests from purchases
     const calculateTotalPurchasedGuests = (purchases) => {
         const total = purchases.reduce(
             (sum, purchase) => sum + (purchase.mealNum || 0),
@@ -160,7 +150,6 @@ const BreakfastCheckin = () => {
         setTotalPurchasedGuests(total);
     };
 
-    // Effect for personal room input (partial check-in)
     useEffect(() => {
         if (personalRoomInput && data.length > 0) {
             const roomData = data.find(d => String(d.ルーム).trim() === personalRoomInput.trim());
@@ -169,7 +158,6 @@ const BreakfastCheckin = () => {
                 setPartialArrivedCount(1);
                 setShowPartialModal(true);
             } else {
-                // Using a custom modal instead of alert()
                 setModalContent({
                     title: 'エラー',
                     message: 'その部屋番号は見つかりませんでした。',
@@ -181,7 +169,6 @@ const BreakfastCheckin = () => {
         }
     }, [data, personalRoomInput]);
 
-    // Function to read Excel files
     const readExcelFile = async (file) => {
         try {
             const fileData = await file.arrayBuffer();
@@ -214,8 +201,8 @@ const BreakfastCheckin = () => {
                             名前: guestName,
                             人数: numberOfGuests,
                             status: "not_arrived",
-                            waitingTime: null, // Ensure initial state is null
-                            arrivedTime: null // Ensure initial state is null
+                            waitingTime: null, 
+                            arrivedTime: null 
                         });
                     }
                 }
@@ -228,7 +215,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Function to get the next available fixed index for waiting guests
     const getNextWaitingIndex = async () => {
         const guestsSnapshot = await getDocs(query(collection(db, "breakfastGuests")));
         const purchaseSnapshot = await getDocs(collection(db, "breakfastPurchases"));
@@ -244,7 +230,6 @@ const BreakfastCheckin = () => {
         return maxIndex + 1;
     };
 
-    // Function to move a purchased item to waiting status
     const handleMovePurchaseToWaiting = async (purchaseId) => {
         try {
             const purchaseItem = inputList.find(item => item.id === purchaseId);
@@ -262,7 +247,7 @@ const BreakfastCheckin = () => {
             const nextIndex = await getNextWaitingIndex();
             await setDoc(doc(db, "breakfastPurchases", purchaseId), {
                 status: 'waiting',
-                waitingTime: Date.now(), // Set waiting time when moved to waiting
+                waitingTime: Date.now(), 
                 fixedIndex: nextIndex,
             }, { merge: true });
 
@@ -271,7 +256,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Function to read CSV files
     const readCSVFile = async (file) => {
         try {
             const text = await file.text();
@@ -305,8 +289,8 @@ const BreakfastCheckin = () => {
                     名前: guestName,
                     人数: numberOfGuests,
                     status: "not_arrived",
-                    waitingTime: null, // Ensure initial state is null
-                    arrivedTime: null // Ensure initial state is null
+                    waitingTime: null, 
+                    arrivedTime: null 
                 };
             }).filter(guest => guest.ルーム && guest.人数 > 0);
             setGuestsData(formattedData);
@@ -316,7 +300,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Function to upload data to Firestore
     const uploadDataToFirestore = async (data) => {
         try {
             const collectionRef = collection(db, "breakfastGuests");
@@ -329,7 +312,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Function to delete all documents in a collection
     const deleteCollectionData = async (collectionRef) => {
         try {
             const snapshot = await getDocs(collectionRef);
@@ -339,12 +321,10 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Handle composition start for name input (Japanese IME)
     const handleCompositionStart = () => {
         setIsComposing(true);
     };
 
-    // Handle composition end for name input (Japanese IME)
     const handleCompositionEnd = (e) => {
         setIsComposing(false);
 
@@ -356,7 +336,6 @@ const BreakfastCheckin = () => {
         } setNameInputValue('');
     };
 
-    // Handle input change for name input
     const handleInputChange = (e) => {
         if (!isComposing) {
             const value = e.target.value;
@@ -364,7 +343,6 @@ const BreakfastCheckin = () => {
         } else {setNameInputValue(e.target.value); }
     };
 
-    // Handle adding a new purchase entry
      const handleInput = async () => {
         const rawRoomName = roomName.trim();
         const parsedRoomName = parseInt(rawRoomName);
@@ -388,7 +366,7 @@ const BreakfastCheckin = () => {
                 status: 'purchase_only',
                 waitingTime: null,
                 fixedIndex: null,
-                purchaseTime: Date.now(), // <-- THÊM DÒNG NÀY: Lưu lại thời gian mua
+                purchaseTime: Date.now(), 
             };
             await addDoc(collection(db, 'breakfastPurchases'), newItem);
             setRoomName('');
@@ -398,7 +376,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Update guest statistics (total, arrived, not arrived)
     const updateGuestStatistics = (data) => {
         let total = 0;
         let notArrived = 0;
@@ -416,7 +393,6 @@ const BreakfastCheckin = () => {
         setNotArrivedGuests(notArrived);
     };
 
-    // Close modal
     const closeModal = () => {
         setIsModalOpen(false);
         setModalContent(null);
@@ -424,7 +400,6 @@ const BreakfastCheckin = () => {
         setNameInput('');
     };
 
-    // Get current date in Japanese format
     const getCurrentDate = () => {
         const today = new Date();
         const year = today.getFullYear();
@@ -433,7 +408,6 @@ const BreakfastCheckin = () => {
         return `${year}年${month}月${day}日`;
     };
 
-    // Handle room number check-in
     const handleRoomCheckIn = () => {
         if (!roomNumber.trim()) {
             setModalContent({
@@ -482,7 +456,6 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-    // Handle name check-in
     const handleNameCheckIn = () => {
         if (!nameInput.trim()) {
             setModalContent({
@@ -538,12 +511,10 @@ const BreakfastCheckin = () => {
             newIndex: '',
             });
 
-    // Handle individual guest check-in
     const handleCheckInGuest = async (guestId, room, count) => {
         try {
             const guest = guestsData.find((g) => g.id === guestId);
             if (guest) {
-                // NEW: Add arrivedTime when status changes to 'arrived'
                 await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
             } else {
                 console.warn(`ID ${guestId} is not found`);
@@ -560,12 +531,10 @@ const BreakfastCheckin = () => {
         setRoomNumber('');
     };
 
-    // Handle batch check-in for multiple guests
     const handleCheckInAll = async (guests) => {
         try {
             for (const guest of guests) {
                 if (guest.status !== 'arrived') {
-                    // NEW: Add arrivedTime when status changes to 'arrived'
                     await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
                 }
             }
@@ -583,7 +552,6 @@ const BreakfastCheckin = () => {
         setRoomNumber('');
     };
 
-    // New function to handle batch check-in for selected 'not_arrived' guests
     const handleBatchCheckInNotArrived = async () => {
         if (selectedNotArrivedGuests.length === 0) {
             setModalContent({
@@ -604,10 +572,9 @@ const BreakfastCheckin = () => {
                     action: async () => {
                         try {
                             for (const guestId of selectedNotArrivedGuests) {
-                                // NEW: Add arrivedTime when status changes to 'arrived'
                                 await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
                             }
-                            setSelectedNotArrivedGuests([]); // Clear selection after batch check-in
+                            setSelectedNotArrivedGuests([]); 
                             closeModal();
                         } catch (error) {
                             console.error('Error during batch check-in:', error);
@@ -626,7 +593,6 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-    // Handle cancelling a check-in
     const handleCancelCheckIn = async (guestId) => {
         const guestToCancel = guestsData.find(guest => guest.id === guestId);
         if (guestToCancel) {
@@ -638,7 +604,6 @@ const BreakfastCheckin = () => {
                         text: 'はい',
                         action: async () => {
                             try {
-                                // NEW: Remove arrivedTime when status changes back to 'not_arrived'
                                 await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived', arrivedTime: null, waitingTime: null, fixedIndex: null }, { merge: true });
                                 closeModal();
                             } catch (error) {
@@ -659,7 +624,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Handle individual check-in from modal
     const handleIndividualCheckIn = (guest) => {
         setModalContent({
             title: '確認',
@@ -678,28 +642,25 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-    // Handle moving a guest to waiting status
     const handleMoveToWaiting = async (guestId) => {
         try {
             const nextIndex = await getNextWaitingIndex();
             await setDoc(doc(db, "breakfastGuests", guestId), {
                 status: 'waiting',
-                waitingTime: Date.now(), // Set waiting time when moved to waiting
+                waitingTime: Date.now(), 
                 fixedIndex: nextIndex,
-                arrivedTime: null // Clear arrived time if moved back to waiting
+                arrivedTime: null 
             }, { merge: true });
         } catch (error) {
             console.error('Error moving to waiting:', error);
         }
     };
 
-    // Handle moving a guest from waiting to arrived status
     const handleMoveToArrivedFromWaiting = async (guest) => {
         try {
             if (guest.source === 'guest') {
                 await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
             } else if (guest.source === 'purchase') {
-                // When "当日" guest is moved from waiting, status reverts to 'purchase_only'
                 await setDoc(doc(db, "breakfastPurchases", guest.id), { status: 'purchase_only', waitingTime: null, fixedIndex: null }, { merge: true });
             }
         } catch (error) {
@@ -707,7 +668,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // NEW: Handle batch check-in for selected waiting guests
     const handleBatchCheckInWaiting = async () => {
         if (selectedWaitingGuests.length === 0) {
             setModalContent({
@@ -728,9 +688,9 @@ const BreakfastCheckin = () => {
                     action: async () => {
                         try {
                             for (const guest of selectedWaitingGuests) {
-                                await handleMoveToArrivedFromWaiting(guest); // Reuse the existing function
+                                await handleMoveToArrivedFromWaiting(guest); 
                             }
-                            setSelectedWaitingGuests([]); // Clear selection after batch check-in
+                            setSelectedWaitingGuests([]); 
                             closeModal();
                         } catch (error) {
                             console.error('Error during batch check-in for waiting guests:', error);
@@ -749,7 +709,6 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-    // Handle refresh (clear all guest data)
      const handleRefresh = async () => {
         setModalContent({
             title: 'データ取消',
@@ -759,14 +718,11 @@ const BreakfastCheckin = () => {
                     text: 'はい',
                     action: async () => {
                         try {
-                            // Xóa dữ liệu khách đã tải lên từ Excel/CSV
                             await deleteCollectionData(collection(db, "breakfastGuests"));
                             setGuestsData([]);
                             setTotalGuests(0);
                             setCheckedInGuests(0);
-
-                            // NEW: Xóa dữ liệu khách mua thêm trong ngày (当日朝食購入)
-                            await handleClearAllPurchases(); // <-- THÊM DÒNG NÀY
+                            await handleClearAllPurchases(); 
 
                             setModalContent({
                                 title: 'データ取消',
@@ -777,7 +733,6 @@ const BreakfastCheckin = () => {
                             if (fileInputRef.current) {
                                 fileInputRef.current.value = null;
                             }
-                            // Xóa thời gian chờ đợi toàn cục
                             await setDoc(doc(db, "appSettings", "waitingTimes"), { startTime: null, endTime: null }, { merge: true });
                         } catch (error) {
                             console.error('Refresh data error', error);
@@ -796,8 +751,6 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-
-    // Handle deleting a single purchase entry
     const handleDeletePurchase = async (purchaseId) => {
         try {
             await deleteDoc(doc(db, "breakfastPurchases", purchaseId));
@@ -806,7 +759,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Handle clearing all purchase entries
     const handleClearAllPurchases = async () => {
         try {
             const collectionRef = collection(db, "breakfastPurchases");
@@ -829,7 +781,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Handle file change (Excel or CSV upload)
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -840,7 +791,6 @@ const BreakfastCheckin = () => {
         } else if (fileType === 'csv') {
             readCSVFile(file);
         } else {
-            // Using a custom modal instead of alert()
             setModalContent({
                 title: 'ファイルエラー',
                 message: 'ファイル .xlsx, .xls, .csv をアップロードして下さい。',
@@ -853,14 +803,12 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Handle partial check-in click
     const handlePartialCheckInClick = (guest) => {
         setPartialCheckinData(guest);
         setPartialArrivedCount(1);
         setShowPartialModal(true);
     };
 
-    // Handle partial check-in for a guest
     const handleCheckInGuestPartial = async (guest, arrivedCount) => {
         try {
             if (guest) {
@@ -870,9 +818,9 @@ const BreakfastCheckin = () => {
                         人数: arrivedCount,
                         status: 'arrived',
                         id: `${guest.id}-arrived-${Date.now()}`,
-                        arrivedTime: Date.now(), // NEW: Set arrivedTime for partial check-in
-                        waitingTime: null, // Clear waiting time
-                        fixedIndex: null // Clear fixed index
+                        arrivedTime: Date.now(), 
+                        waitingTime: null, 
+                        fixedIndex: null 
                     };
                     await setDoc(doc(collection(db, "breakfastGuests"), arrivedGuestData.id), arrivedGuestData);
 
@@ -884,9 +832,9 @@ const BreakfastCheckin = () => {
                     await setDoc(doc(db, "breakfastGuests", guest.id), {
                         ...guest,
                         status: 'arrived',
-                        arrivedTime: Date.now(), // NEW: Set arrivedTime for full check-in
-                        waitingTime: null, // Clear waiting time
-                        fixedIndex: null // Clear fixed index
+                        arrivedTime: Date.now(), 
+                        waitingTime: null, 
+                        fixedIndex: null
                     }, { merge: true });
                 }
             } else {
@@ -903,13 +851,11 @@ const BreakfastCheckin = () => {
         }
     };
 
-    // Close partial check-in modal
     const closePartialModal = () => {
         setShowPartialModal(false);
         setPartialCheckinData(null);
     };
 
-    // Handle checkbox change for individual guests in 'not_arrived' table
     const handleCheckboxChange = (guestId) => {
         setSelectedNotArrivedGuests(prevSelected => {
             if (prevSelected.includes(guestId)) {
@@ -920,10 +866,9 @@ const BreakfastCheckin = () => {
         });
     };
 
-    // NEW: Handle checkbox change for individual guests in 'waiting' table
     const handleWaitingCheckboxChange = (guest) => {
         setSelectedWaitingGuests(prevSelected => {
-            const guestIdentifier = guest.id; // Use guest.id as the identifier
+            const guestIdentifier = guest.id; 
             if (prevSelected.some(g => g.id === guestIdentifier)) {
                 return prevSelected.filter(g => g.id !== guestIdentifier);
             } else {
@@ -932,31 +877,25 @@ const BreakfastCheckin = () => {
         });
     };
 
-    // NEW: Handle global waiting start time
     const handleSetWaitingStartTime = async () => {
         const now = Date.now();
         const appSettingsDocRef = doc(db, "appSettings", "waitingTimes");
         if (waitingGlobalStartTime) {
-            // If already set, clear it
             await setDoc(appSettingsDocRef, { startTime: null }, { merge: true });
             setWaitingGlobalStartTime(null);
         } else {
-            // Set current time
             await setDoc(appSettingsDocRef, { startTime: now }, { merge: true });
             setWaitingGlobalStartTime(now);
         }
     };
 
-    // NEW: Handle global waiting end time
     const handleSetWaitingEndTime = async () => {
         const now = Date.now();
         const appSettingsDocRef = doc(db, "appSettings", "waitingTimes");
         if (waitingGlobalEndTime) {
-            // If already set, clear it
             await setDoc(appSettingsDocRef, { endTime: null }, { merge: true });
             setWaitingGlobalEndTime(null);
         } else {
-            // Set current time
             await setDoc(appSettingsDocRef, { endTime: now }, { merge: true });
             setWaitingGlobalEndTime(now);
         }
@@ -1122,7 +1061,7 @@ const BreakfastCheckin = () => {
                                  style={{display: 'flex', justifyContent: 'center', alignItems: 'center',
                                          gap: '10px', marginBottom: '10px'}}>
                                 <input
-                                    type="text" // Change type to text to avoid default number input behavior
+                                    type="text"
                                     placeholder="部屋番号"
                                     value={roomName}
                                     onChange={(e) => setRoomName(e.target.value)}

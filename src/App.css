@@ -383,7 +383,42 @@ th {
   .hide-button:hover {
     background-color: #B2A485; /* Thay đổi màu nền khi di chuột vào để có hiệu ứng tương tác */
   }
+  
+   .torikeshi {
+    width: 150px; /* Bỏ dấu nháy */
+    margin-top: 10px; /* Bỏ dấu nháy */
+    background-color: red;
+    margin-right: 10px;
+    margin-bottom: 10px; /* Bỏ dấu nháy */
+    /* Thêm các thuộc tính khác nếu cần, ví dụ: padding, border, border-radius */
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    }
 
+    .torikeshi:hover { /* Đổi từ .torikeshi-button:hover thành .torikeshi:hover */
+    background-color: #eaa174; /* Thay đổi màu nền khi di chuột vào để có hiệu ứng tương tác */
+    }
+
+    .torikeshi-bubun {
+    width: 150px; /* Bỏ dấu nháy */
+    margin-top: 10px; /* Bỏ dấu nháy */
+    background-color: orange;
+    margin-right: 10px;
+    margin-bottom: 10px; /* Bỏ dấu nháy */
+    /* Thêm các thuộc tính khác nếu cần */
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    }
+
+    .torikeshi-bubun:hover { /* Thêm hiệu ứng hover cho nút này nếu muốn */
+    background-color: #ff8c00; /* Màu cam đậm hơn khi hover */
+    }
   .individual-checkin-button {
     background-color: #4CAF50; /* Màu xanh lá cây, bạn có thể thay đổi */
     color: white;
@@ -415,30 +450,4 @@ th {
     padding: 20px;
     border-radius: 8px;
     width: 450px;
-}
-.batch-checkin-btn, .start-btn, .end-btn {
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    cursor: pointer;
-    /* height: 39px; */ /* <-- BỎ DÒNG NÀY ĐI */
-    min-height: 39px; /* <-- HOẶC THAY BẰNG min-height */
-    font-size: 16px;
-    box-sizing: border-box; /* Quan trọng để padding được tính vào kích thước tổng */
-    /* Đảm bảo không có white-space: nowrap; ở đây nếu có */
-}
-
-@media (max-width: 600px) {
-    .batch-checkin-btn,
-    .start-btn,
-    .end-btn {
-        padding: 3px 6px;
-        font-size: 13px;
-        /* height: 30px; */ /* <-- BỎ DÒNG NÀY ĐI */
-        min-height: 30px; /* <-- HOẶC THAY BẰNG min-height */
-        min-width: 0;
-        /* Đảm bảo không có white-space: nowrap; ở đây nếu có */
-    }
-
-    /* ... các style khác ... */
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebaseConfig';
-import {collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
+import {collection, setDoc, doc, deleteDoc, onSnapshot, getDocs, query, orderBy, addDoc, where } from 'firebase/firestore';
 import '../App';
 
 const BreakfastCheckin = () => {
@@ -36,9 +36,6 @@ const BreakfastCheckin = () => {
     const [personalRoomInput, setPersonalRoomInput] = useState('');
     const [selectedNotArrivedGuests, setSelectedNotArrivedGuests] = useState([]);
     const [selectedWaitingGuests, setSelectedWaitingGuests] = useState([]);
-    const [waitingGlobalStartTime, setWaitingGlobalStartTime] = useState(null);
-    const [waitingGlobalEndTime, setWaitingGlobalEndTime] = useState(null);
-
     const navigate = useNavigate();
     const goToHome = () => { navigate('/home'); };
     const goToRestaurant = () => navigate('/restaurant');
@@ -72,7 +69,7 @@ const BreakfastCheckin = () => {
         );
 
         const unsubscribePurchases = onSnapshot(
-            query(collection(db, 'breakfastPurchases'), orderBy("purchaseTime")), 
+            query(collection(db, 'breakfastPurchases'), orderBy("purchaseTime")),
             (snapshot) => {
                 const purchases = snapshot.docs.map((doc, idx) => {
                     const data = doc.data();
@@ -83,7 +80,9 @@ const BreakfastCheckin = () => {
                         waitingTime: data.waitingTime || null,
                         fixedIndex: data.fixedIndex || null,
                         source: 'purchase',
-                        purchaseTime: data.purchaseTime || null, 
+                        purchaseTime: data.purchaseTime || null,
+                        isGuided: data.isGuided || false, // Thêm trường isGuided
+                        guidedTime: data.guidedTime || null, // Thêm trường guidedTime
                     };
                 });
                 setInputList(purchases);
@@ -92,46 +91,33 @@ const BreakfastCheckin = () => {
             (error) => console.error('Purchase data fetch error:', error)
         );
 
-        const unsubscribeGlobalTimes = onSnapshot(
-            doc(db, "appSettings", "waitingTimes"),
-            (docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    const data = docSnapshot.data();
-                    setWaitingGlobalStartTime(data.startTime || null);
-                    setWaitingGlobalEndTime(data.endTime || null);
-                } else {
-                    setWaitingGlobalStartTime(null);
-                    setWaitingGlobalEndTime(null);
-                }
-            },
-            (error) => console.error('Global waiting times fetch error:', error)
-        );
-
-
         return () => {
             unsubscribeGuests();
             unsubscribePurchases();
-            unsubscribeGlobalTimes(); 
         };
         }, []);
 
         useEffect(() => {
+            // Lọc tất cả khách có status 'waiting' hoặc đã từng 'waiting' và có isGuided = true
             const allWaiting = [
-                ...data.filter(g => g.status === 'waiting').map(g => ({ ...g, source: 'guest' })),
-                ...inputList.filter(p => p.status === 'waiting').map(p => ({ ...p, source: 'purchase' }))
+                ...data.filter(g => g.status === 'waiting' || g.isGuided === true).map(g => ({ ...g, source: 'guest' })),
+                ...inputList.filter(p => p.status === 'waiting' || p.isGuided === true).map(p => ({ ...p, source: 'purchase' }))
             ];
 
+            // Đếm số lượng khách đang chờ thực sự (status === 'waiting') từ danh sách mua hàng
             const currentPurchaseWaitingCount = inputList
                 .filter(p => p.status === 'waiting')
                 .reduce((sum, p) => sum + (p.mealNum || 0), 0);
             setPurchaseWaitingCount(currentPurchaseWaitingCount);
 
+            // Sắp xếp danh sách chờ
             const sortedWaiting = allWaiting.sort((a, b) => (a.fixedIndex || 0) - (b.fixedIndex || 0));
             setWaitingGuests(sortedWaiting);
 
+            // Đếm số lượng khách đang chờ thực sự (status === 'waiting') từ danh sách khách
             let nonPurchaseWaitingCount = 0;
             sortedWaiting.forEach(guest => {
-                if (guest.source === 'guest') {
+                if (guest.source === 'guest' && guest.status === 'waiting') {
                     nonPurchaseWaitingCount += guest.人数 || 0;
                 }
             });
@@ -201,8 +187,10 @@ const BreakfastCheckin = () => {
                             名前: guestName,
                             人数: numberOfGuests,
                             status: "not_arrived",
-                            waitingTime: null, 
-                            arrivedTime: null 
+                            waitingTime: null,
+                            arrivedTime: null,
+                            isGuided: false, // Thêm trường isGuided mặc định
+                            guidedTime: null // Thêm trường guidedTime mặc định
                         });
                     }
                 }
@@ -218,10 +206,9 @@ const BreakfastCheckin = () => {
     const getNextWaitingIndex = async () => {
         const guestsSnapshot = await getDocs(query(collection(db, "breakfastGuests")));
         const purchaseSnapshot = await getDocs(collection(db, "breakfastPurchases"));
-
         const allCurrentWaiting = [
-            ...guestsSnapshot.docs.map(doc => doc.data()).filter(g => g.status === 'waiting'),
-            ...purchaseSnapshot.docs.map(doc => doc.data()).filter(p => p.status === 'waiting')
+            ...guestsSnapshot.docs.map(doc => doc.data()).filter(g => g.status === 'waiting' || g.isGuided === true),
+            ...purchaseSnapshot.docs.map(doc => doc.data()).filter(p => p.status === 'waiting' || p.isGuided === true)
         ];
 
         const maxIndex = allCurrentWaiting.reduce((max, item) => {
@@ -247,8 +234,10 @@ const BreakfastCheckin = () => {
             const nextIndex = await getNextWaitingIndex();
             await setDoc(doc(db, "breakfastPurchases", purchaseId), {
                 status: 'waiting',
-                waitingTime: Date.now(), 
+                waitingTime: Date.now(),
                 fixedIndex: nextIndex,
+                isGuided: false, // Đặt lại isGuided khi chuyển sang waiting
+                guidedTime: null // Xóa guidedTime
             }, { merge: true });
 
         } catch (error) {
@@ -289,8 +278,10 @@ const BreakfastCheckin = () => {
                     名前: guestName,
                     人数: numberOfGuests,
                     status: "not_arrived",
-                    waitingTime: null, 
-                    arrivedTime: null 
+                    waitingTime: null,
+                    arrivedTime: null,
+                    isGuided: false, // Thêm trường isGuided mặc định
+                    guidedTime: null // Thêm trường guidedTime mặc định
                 };
             }).filter(guest => guest.ルーム && guest.人数 > 0);
             setGuestsData(formattedData);
@@ -366,7 +357,9 @@ const BreakfastCheckin = () => {
                 status: 'purchase_only',
                 waitingTime: null,
                 fixedIndex: null,
-                purchaseTime: Date.now(), 
+                purchaseTime: Date.now(),
+                isGuided: false, // Thêm trường isGuided mặc định
+                guidedTime: null // Thêm trường guidedTime mặc định
             };
             await addDoc(collection(db, 'breakfastPurchases'), newItem);
             setRoomName('');
@@ -515,7 +508,7 @@ const BreakfastCheckin = () => {
         try {
             const guest = guestsData.find((g) => g.id === guestId);
             if (guest) {
-                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
+                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null, isGuided: false, guidedTime: null }, { merge: true });
             } else {
                 console.warn(`ID ${guestId} is not found`);
             }
@@ -535,7 +528,7 @@ const BreakfastCheckin = () => {
         try {
             for (const guest of guests) {
                 if (guest.status !== 'arrived') {
-                    await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
+                    await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null, isGuided: false, guidedTime: null }, { merge: true });
                 }
             }
             if (guests && guests.length > 0) {
@@ -572,9 +565,9 @@ const BreakfastCheckin = () => {
                     action: async () => {
                         try {
                             for (const guestId of selectedNotArrivedGuests) {
-                                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
+                                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null, isGuided: false, guidedTime: null }, { merge: true });
                             }
-                            setSelectedNotArrivedGuests([]); 
+                            setSelectedNotArrivedGuests([]);
                             closeModal();
                         } catch (error) {
                             console.error('Error during batch check-in:', error);
@@ -604,7 +597,7 @@ const BreakfastCheckin = () => {
                         text: 'はい',
                         action: async () => {
                             try {
-                                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived', arrivedTime: null, waitingTime: null, fixedIndex: null }, { merge: true });
+                                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived', arrivedTime: null, waitingTime: null, fixedIndex: null, isGuided: false, guidedTime: null }, { merge: true });
                                 closeModal();
                             } catch (error) {
                                 console.error('Error cancelling check-in:', error);
@@ -647,9 +640,11 @@ const BreakfastCheckin = () => {
             const nextIndex = await getNextWaitingIndex();
             await setDoc(doc(db, "breakfastGuests", guestId), {
                 status: 'waiting',
-                waitingTime: Date.now(), 
+                waitingTime: Date.now(),
                 fixedIndex: nextIndex,
-                arrivedTime: null 
+                arrivedTime: null,
+                isGuided: false, // Đặt lại isGuided khi chuyển sang waiting
+                guidedTime: null // Xóa guidedTime
             }, { merge: true });
         } catch (error) {
             console.error('Error moving to waiting:', error);
@@ -657,15 +652,97 @@ const BreakfastCheckin = () => {
     };
 
     const handleMoveToArrivedFromWaiting = async (guest) => {
-        try {
-            if (guest.source === 'guest') {
-                await setDoc(doc(db, "breakfastGuests", guest.id), { status: 'arrived', arrivedTime: Date.now(), waitingTime: null, fixedIndex: null }, { merge: true });
-            } else if (guest.source === 'purchase') {
-                await setDoc(doc(db, "breakfastPurchases", guest.id), { status: 'purchase_only', waitingTime: null, fixedIndex: null }, { merge: true });
-            }
-        } catch (error) {
-            console.error('Error moving to arrived:', error);
-        }
+        setModalContent({
+            title: '確認',
+            message: `部屋 ${guest.source === 'guest' ? guest.ルーム : guest.roomName} は 到着済に変更しますか？`,
+            buttons: [
+                {
+                    text: 'はい',
+                    action: async () => {
+                        try {
+                            if (guest.source === 'guest') {
+                                await setDoc(doc(db, "breakfastGuests", guest.id), {
+                                    status: 'arrived', // Chuyển trạng thái chính thức sang 'arrived'
+                                    arrivedTime: Date.now(), // Cập nhật thời gian đến
+                                    waitingTime: guest.waitingTime, // Giữ lại waitingTime để hiển thị lịch sử
+                                    fixedIndex: guest.fixedIndex, // Giữ lại fixedIndex để hiển thị lịch sử
+                                    isGuided: true, // Đánh dấu là đã được hướng dẫn
+                                    guidedTime: Date.now() // Thời gian hướng dẫn
+                                }, { merge: true });
+                            } else if (guest.source === 'purchase') {
+                                await setDoc(doc(db, "breakfastPurchases", guest.id), {
+                                    status: 'arrived', // Chuyển trạng thái chính thức sang 'arrived'
+                                    waitingTime: guest.waitingTime, // Giữ lại waitingTime
+                                    fixedIndex: guest.fixedIndex, // Giữ lại fixedIndex
+                                    isGuided: true, // Đánh dấu là đã được hướng dẫn
+                                    guidedTime: Date.now() // Thời gian hướng dẫn
+                                }, { merge: true });
+                            }
+                            closeModal(); // Đóng modal sau khi xác nhận
+                        } catch (error) {
+                            console.error('Error moving to arrived:', error);
+                            setModalContent({
+                                title: 'エラー',
+                                message: '変更中にエラーが発生しました。',
+                                buttons: [{ text: '戻る', action: () => closeModal() }],
+                            });
+                            setIsModalOpen(true);
+                        }
+                    },
+                },
+                { text: 'いいえ', action: () => closeModal() },
+            ],
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleClearWaitingGuests = async () => {
+        setModalContent({
+            title: 'ウェイティング取消',
+            message: 'ウェイティングリストのデータをすべて削除しますか？',
+            buttons: [
+                {
+                    text: 'はい',
+                    action: async () => {
+                        try {
+                            const guestsCollectionRef = collection(db, "breakfastGuests");
+                            const purchasesCollectionRef = collection(db, "breakfastPurchases");
+
+                            // Xóa khách từ breakfastGuests có status là 'waiting' hoặc 'isGuided' là true
+                            const guestsSnapshot = await getDocs(query(guestsCollectionRef, where('status', '==', 'waiting')));
+                            const guidedGuestsSnapshot = await getDocs(query(guestsCollectionRef, where('isGuided', '==', true)));
+
+                            const deleteGuestPromises = [
+                                ...guestsSnapshot.docs.map(docSnapshot => deleteDoc(doc(guestsCollectionRef, docSnapshot.id))),
+                                ...guidedGuestsSnapshot.docs.map(docSnapshot => deleteDoc(doc(guestsCollectionRef, docSnapshot.id)))
+                            ];
+                            await Promise.all(deleteGuestPromises);
+
+                            // Xóa khách từ breakfastPurchases có status là 'waiting' hoặc 'isGuided' là true
+                            const purchaseSnapshot = await getDocs(query(purchasesCollectionRef, where('status', '==', 'waiting')));
+                            const guidedPurchaseSnapshot = await getDocs(query(purchasesCollectionRef, where('isGuided', '==', true)));
+
+                            const deletePurchasePromises = [
+                                ...purchaseSnapshot.docs.map(docSnapshot => deleteDoc(doc(purchasesCollectionRef, docSnapshot.id))),
+                                ...guidedPurchaseSnapshot.docs.map(docSnapshot => deleteDoc(doc(purchasesCollectionRef, docSnapshot.id)))
+                            ];
+                            await Promise.all(deletePurchasePromises);
+                             closeModal();
+                        } catch (error) {
+                            console.error('Error clearing waiting guests:', error);
+                            setModalContent({
+                                title: 'エラー',
+                                message: 'ウェイティングリストのデータ削除中にエラーが発生しました。',
+                                buttons: [{ text: '戻る', action: () => closeModal() }],
+                            });
+                            setIsModalOpen(true);
+                        }
+                    },
+                },
+                { text: 'いいえ', action: () => closeModal() },
+            ],
+        });
+        setIsModalOpen(true);
     };
 
     const handleBatchCheckInWaiting = async () => {
@@ -688,9 +765,27 @@ const BreakfastCheckin = () => {
                     action: async () => {
                         try {
                             for (const guest of selectedWaitingGuests) {
-                                await handleMoveToArrivedFromWaiting(guest); 
+                                // Logic tương tự handleMoveToArrivedFromWaiting nhưng không hiển thị modal cho từng người
+                                if (guest.source === 'guest') {
+                                    await setDoc(doc(db, "breakfastGuests", guest.id), {
+                                        status: 'arrived',
+                                        arrivedTime: Date.now(),
+                                        waitingTime: guest.waitingTime,
+                                        fixedIndex: guest.fixedIndex,
+                                        isGuided: true,
+                                        guidedTime: Date.now()
+                                    }, { merge: true });
+                                } else if (guest.source === 'purchase') {
+                                    await setDoc(doc(db, "breakfastPurchases", guest.id), {
+                                        status: 'arrived',
+                                        waitingTime: guest.waitingTime,
+                                        fixedIndex: guest.fixedIndex,
+                                        isGuided: true,
+                                        guidedTime: Date.now()
+                                    }, { merge: true });
+                                }
                             }
-                            setSelectedWaitingGuests([]); 
+                            setSelectedWaitingGuests([]);
                             closeModal();
                         } catch (error) {
                             console.error('Error during batch check-in for waiting guests:', error);
@@ -722,7 +817,8 @@ const BreakfastCheckin = () => {
                             setGuestsData([]);
                             setTotalGuests(0);
                             setCheckedInGuests(0);
-                            await handleClearAllPurchases(); 
+                            await handleClearAllPurchases();
+                            await handleClearWaitingGuests(); 
 
                             setModalContent({
                                 title: 'データ取消',
@@ -733,7 +829,6 @@ const BreakfastCheckin = () => {
                             if (fileInputRef.current) {
                                 fileInputRef.current.value = null;
                             }
-                            await setDoc(doc(db, "appSettings", "waitingTimes"), { startTime: null, endTime: null }, { merge: true });
                         } catch (error) {
                             console.error('Refresh data error', error);
                             setModalContent({
@@ -818,9 +913,11 @@ const BreakfastCheckin = () => {
                         人数: arrivedCount,
                         status: 'arrived',
                         id: `${guest.id}-arrived-${Date.now()}`,
-                        arrivedTime: Date.now(), 
-                        waitingTime: null, 
-                        fixedIndex: null 
+                        arrivedTime: Date.now(),
+                        waitingTime: null,
+                        fixedIndex: null,
+                        isGuided: false, // Đặt lại isGuided
+                        guidedTime: null // Xóa guidedTime
                     };
                     await setDoc(doc(collection(db, "breakfastGuests"), arrivedGuestData.id), arrivedGuestData);
 
@@ -832,9 +929,11 @@ const BreakfastCheckin = () => {
                     await setDoc(doc(db, "breakfastGuests", guest.id), {
                         ...guest,
                         status: 'arrived',
-                        arrivedTime: Date.now(), 
-                        waitingTime: null, 
-                        fixedIndex: null
+                        arrivedTime: Date.now(),
+                        waitingTime: null,
+                        fixedIndex: null,
+                        isGuided: false, // Đặt lại isGuided
+                        guidedTime: null // Xóa guidedTime
                     }, { merge: true });
                 }
             } else {
@@ -868,37 +967,13 @@ const BreakfastCheckin = () => {
 
     const handleWaitingCheckboxChange = (guest) => {
         setSelectedWaitingGuests(prevSelected => {
-            const guestIdentifier = guest.id; 
+            const guestIdentifier = guest.id;
             if (prevSelected.some(g => g.id === guestIdentifier)) {
                 return prevSelected.filter(g => g.id !== guestIdentifier);
             } else {
                 return [...prevSelected, guest];
             }
         });
-    };
-
-    const handleSetWaitingStartTime = async () => {
-        const now = Date.now();
-        const appSettingsDocRef = doc(db, "appSettings", "waitingTimes");
-        if (waitingGlobalStartTime) {
-            await setDoc(appSettingsDocRef, { startTime: null }, { merge: true });
-            setWaitingGlobalStartTime(null);
-        } else {
-            await setDoc(appSettingsDocRef, { startTime: now }, { merge: true });
-            setWaitingGlobalStartTime(now);
-        }
-    };
-
-    const handleSetWaitingEndTime = async () => {
-        const now = Date.now();
-        const appSettingsDocRef = doc(db, "appSettings", "waitingTimes");
-        if (waitingGlobalEndTime) {
-            await setDoc(appSettingsDocRef, { endTime: null }, { merge: true });
-            setWaitingGlobalEndTime(null);
-        } else {
-            await setDoc(appSettingsDocRef, { endTime: now }, { merge: true });
-            setWaitingGlobalEndTime(now);
-        }
     };
 
     return (
@@ -1084,9 +1159,6 @@ const BreakfastCheckin = () => {
                                 <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleInput}>
                                     入力
                                 </button>
-                                <button style={{ width: '100%', maxWidth: '150px' }} onClick={handleClearAllPurchases}>
-                                    一括取消
-                                </button>
                             </div>
 
                              {inputError && (
@@ -1120,7 +1192,7 @@ const BreakfastCheckin = () => {
                                                         {item.purchaseTime
                                                             ? new Date(item.purchaseTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                                             : ''}
-                                                    </td> {/* <-- THÊM DÒNG NÀY */}
+                                                    </td>
                                                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                                         <button  className='waiting-button' onClick={() => handleMovePurchaseToWaiting(item.id)}>W</button>
                                                         <button  className='cancel-button'  onClick={() => handleDeletePurchase(item.id)}> X</button>
@@ -1158,35 +1230,8 @@ const BreakfastCheckin = () => {
                     // Giữ marginLeft nếu muốn khoảng cách ban đầu trên màn hình lớn
                     style={{ marginLeft: '10px', backgroundColor: "green"}}
                 >
-                    一括チェックイン
+                    一括 O
                 </button>
-
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button
-                        className="start-btn"
-                        onClick={handleSetWaitingStartTime}
-                        style={{ backgroundColor: waitingGlobalStartTime ? '#dc3545' : '#ffc107' }} // Giữ màu động
-                    >
-                        スタート
-                    </button>
-                    {waitingGlobalStartTime && (
-                        <span className="waiting-time-display">
-                            {new Date(waitingGlobalStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    )}
-                    <button
-                        className="end-btn"
-                        onClick={handleSetWaitingEndTime}
-                        style={{ backgroundColor: waitingGlobalEndTime ? '#dc3545' : '#ffc107' }} // Giữ màu động
-                    >
-                        終了
-                    </button>
-                    {waitingGlobalEndTime && (
-                        <span className="waiting-time-display">
-                            {new Date(waitingGlobalEndTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    )}
-                </div>
             </>
         )}
     </div>
@@ -1195,18 +1240,19 @@ const BreakfastCheckin = () => {
                     <table>
                         <thead>
                         <tr>
-                            {/* NEW: Checkbox column header for waiting table */}
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>
                                 <input
                                     type="checkbox"
                                     onChange={(e) => {
+                                        // Chỉ chọn những khách có status 'waiting' thực sự
                                         if (e.target.checked) {
-                                            setSelectedWaitingGuests(waitingGuests); // Select all waiting guests
+                                            setSelectedWaitingGuests(waitingGuests.filter(g => g.status === 'waiting'));
                                         } else {
-                                            setSelectedWaitingGuests([]); // Deselect all
+                                            setSelectedWaitingGuests([]);
                                         }
                                     }}
-                                    checked={selectedWaitingGuests.length === waitingGuests.length && waitingGuests.length > 0}
+                                    // Kiểm tra xem tất cả khách đang chờ thực sự đã được chọn chưa
+                                    checked={selectedWaitingGuests.length === waitingGuests.filter(g => g.status === 'waiting').length && waitingGuests.filter(g => g.status === 'waiting').length > 0}
                                 />
                             </th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>番号</th>
@@ -1214,13 +1260,13 @@ const BreakfastCheckin = () => {
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>状況</th> {/* Thêm cột Tình trạng */}
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                         </tr>
                         </thead>
 
                         <tbody>
                         {
-                            // Group fixedIndex before mapping
                             (() => {
                             const fixedIndexGroups = waitingGuests.reduce((acc, guest) => {
                                 const index = guest.fixedIndex;
@@ -1242,13 +1288,15 @@ const BreakfastCheckin = () => {
 
                                 return (
                                 <tr key={guest.id}>
-                                    {/* NEW: Checkbox for each waiting guest row */}
                                     <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedWaitingGuests.some(g => g.id === guest.id)}
-                                            onChange={() => handleWaitingCheckboxChange(guest)}
-                                        />
+                                        {/* Chỉ cho phép chọn nếu khách đang ở trạng thái 'waiting' */}
+                                        {guest.status === 'waiting' && (
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedWaitingGuests.some(g => g.id === guest.id)}
+                                                onChange={() => handleWaitingCheckboxChange(guest)}
+                                            />
+                                        )}
                                     </td>
                                     <td style={indexStyle}>
                                     {guest.fixedIndex}
@@ -1270,13 +1318,22 @@ const BreakfastCheckin = () => {
                                         })
                                         : ''}
                                     </td>
+                                    {/* Cột Tình trạng mới */}
                                     <td style={rowStyle}>
-                                    <button
-                                        className='checkin-button'
-                                        onClick={() => handleMoveToArrivedFromWaiting(guest)}
-                                    >
-                                        O
-                                    </button>
+                                        {guest.isGuided && guest.guidedTime
+                                            ? `${new Date(guest.guidedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} に案内済`
+                                            : ''}
+                                    </td>
+                                    <td style={rowStyle}>
+                                    {/* Chỉ hiển thị nút 'O' nếu khách đang ở trạng thái 'waiting' */}
+                                    {guest.status === 'waiting' && (
+                                        <button
+                                            className='checkin-button'
+                                            onClick={() => handleMoveToArrivedFromWaiting(guest)}
+                                        >
+                                            O
+                                        </button>
+                                    )}
                                     <button
                                         className='writing-button'
                                         onClick={() =>
@@ -1309,7 +1366,6 @@ const BreakfastCheckin = () => {
                         <button onClick={() => setShowNotArriveTable(!showNotArriveTable)}>
                             {showNotArriveTable ? "非表示" : "表示"}
                         </button>
-                        {/* New Batch Check-in Button for 未到着 */}
                         {showNotArriveTable && (
                             <button
                                 className="batch-checkin-btn"
@@ -1317,7 +1373,7 @@ const BreakfastCheckin = () => {
                                 disabled={selectedNotArrivedGuests.length === 0}
                                 style={{backgroundColor: "green"}}
                             >
-                                一括チェックイン
+                                一括 O
                             </button>
                         )}
                     </div>
@@ -1337,7 +1393,7 @@ const BreakfastCheckin = () => {
                                             }}
                                             checked={selectedNotArrivedGuests.length === guestsData.filter(guest => guest.status === 'not_arrived').length && guestsData.filter(guest => guest.status === 'not_arrived').length > 0}
                                         />
-                                    </th> {/* New column for checkboxes */}
+                                    </th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
@@ -1353,7 +1409,7 @@ const BreakfastCheckin = () => {
                                                 checked={selectedNotArrivedGuests.includes(guest.id)}
                                                 onChange={() => handleCheckboxChange(guest.id)}
                                             />
-                                        </td> {/* Checkbox for each row */}
+                                        </td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
@@ -1383,7 +1439,6 @@ const BreakfastCheckin = () => {
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>部屋番号</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
-                                    {/* NEW: Add 到着時 column header */}
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>到着時</th>
                                     <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                                 </tr>
@@ -1394,7 +1449,6 @@ const BreakfastCheckin = () => {
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.ルーム}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.名前}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
-                                        {/* NEW: Display arrivedTime */}
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                             {guest.arrivedTime
                                                 ? new Date(guest.arrivedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -1475,7 +1529,9 @@ const BreakfastCheckin = () => {
                         onChange={handleFileChange}
                         ref={fileInputRef}
                     />
-                    <button onClick={handleRefresh} style={{ width: '150px', marginTop: '10px' }}>取消</button>
+                    <button onClick={handleRefresh} className="torikeshi">全取消</button>
+                    <button className="torikeshi-bubun" onClick={handleClearWaitingGuests}>  ウェイティング取消 </button>
+                    <button className="torikeshi-bubun" onClick={handleClearAllPurchases}> 当日取消 </button>
                 </div>
             </div>
         </div>

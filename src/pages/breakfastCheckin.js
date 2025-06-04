@@ -1260,7 +1260,7 @@ const BreakfastCheckin = () => {
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
-                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>状況</th> {/* Thêm cột Tình trạng */}
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>状況</th>{/* Thêm cột Tình trạng */}
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                         </tr>
                         </thead>
@@ -1530,8 +1530,6 @@ const BreakfastCheckin = () => {
                         ref={fileInputRef}
                     />
                     <button onClick={handleRefresh} className="torikeshi">全取消</button>
-                    <button className="torikeshi-bubun" onClick={handleClearWaitingGuests}>  ウェイティング取消 </button>
-                    <button className="torikeshi-bubun" onClick={handleClearAllPurchases}> 当日取消 </button>
                 </div>
             </div>
         </div>

@@ -162,15 +162,17 @@ const GuestCheckin = () => {
     const handleConfirmCheckin = async () => {
         if (guestInfo && guestInfo.length > 0) {
             try {
-                await Promise.all(
-                    guestInfo.map(async (guest) => {
-                        const guestDocRef = doc(db, "breakfastGuests", guest.id);
-                        await updateDoc(guestDocRef, { status: "arrived" });
+            await Promise.all(
+                guestInfo.map(async (guest) => {
+                    const guestDocRef = doc(db, "breakfastGuests", guest.id);
+                        await updateDoc(guestDocRef, {
+                            status: "arrived",
+                            arrivedTime: Date.now() // <--- CHANGE THIS LINE
+                        });
                     })
                 );
                 setModalGuestName(guestInfo.map(g => `${g.名前}${language === 'ja' ? ' 様' : ''}`).join(', '));
                 setShowModal(true);
-                // Thiết lập timeout để ẩn modal sau 10 giây
                 timeoutId.current = setTimeout(() => {
                     setShowModal(false);
                     setRoomNumber('');

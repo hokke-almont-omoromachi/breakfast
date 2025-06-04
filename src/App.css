@@ -402,23 +402,7 @@ th {
     background-color: #eaa174; /* Thay đổi màu nền khi di chuột vào để có hiệu ứng tương tác */
     }
 
-    .torikeshi-bubun {
-    width: 150px; /* Bỏ dấu nháy */
-    margin-top: 10px; /* Bỏ dấu nháy */
-    background-color: orange;
-    margin-right: 10px;
-    margin-bottom: 10px; /* Bỏ dấu nháy */
-    /* Thêm các thuộc tính khác nếu cần */
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    cursor: pointer;
-    }
 
-    .torikeshi-bubun:hover { /* Thêm hiệu ứng hover cho nút này nếu muốn */
-    background-color: #ff8c00; /* Màu cam đậm hơn khi hover */
-    }
   .individual-checkin-button {
     background-color: #4CAF50; /* Màu xanh lá cây, bạn có thể thay đổi */
     color: white;

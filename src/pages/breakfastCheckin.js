@@ -424,30 +424,54 @@ const BreakfastCheckin = () => {
             return;
         }
 
-        setModalContent({
-            title: '確認',
-            message: matchingGuests.map(guest => ({
-                text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
-                id: guest.id,
-                status: guest.status,
-                renderButton: (onClick) => (
-                    <button　className='checkin-button'　onClick={onClick}>O</button>
-                ),
-            })),
-            buttons: [
-                {
-                    text: '一括チェックイン',
-                    action: () => {
-                        handleCheckInAll(matchingGuests);
-                        closeModal();
-                    },
-                    style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' },
+        const hasWaiting = matchingGuests.some(g => g.status === 'waiting');
+        if (hasWaiting) {
+            setModalContent({
+                title: 'ウェイティングのお客様です。',
+                message: 'ウェイティング表からチェックインして下さい。',
+                buttons: [{ text: '戻る', action: () => closeModal() }],
+            });
+            setIsModalOpen(true);
+            return;
+        }
+
+    setModalContent({
+        title: '確認',
+        message: matchingGuests.map(guest => ({
+            text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
+            id: guest.id,
+            status: guest.status,
+            renderButton: () => (
+                <div className="button-group">
+                    <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
+                    <button className='waiting-button' onClick={() => confirmMoveToWaiting(guest)}>W</button>
+                    <button
+                        className='invi-button'
+                        onClick={() => {
+                            handlePartialCheckInClick(guest);
+                            closeModal();
+                        }}
+                    >
+                        B
+                    </button>
+                </div>
+            ),
+        })),
+        buttons: [
+            {
+                text: '一括チェックイン',
+                action: () => {
+                    handleCheckInAll(matchingGuests);
+                    closeModal();
                 },
-                { text: '戻る', action: () => closeModal() },
-            ],
-        });
-        setIsModalOpen(true);
-    };
+                style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' },
+            },
+            { text: '戻る', action: () => closeModal() },
+        ],
+    });
+    setIsModalOpen(true);
+};
+
 
     const handleNameCheckIn = () => {
         if (!nameInput.trim()) {
@@ -479,9 +503,27 @@ const BreakfastCheckin = () => {
                 text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
                 id: guest.id,
                 status: guest.status,
-                renderButton: (onClick) => (
-                    <button　className='checkin-button' onClick={onClick}>O</button>
-                ),
+                renderButton: () => {
+                    if (guest.status === 'waiting') {
+                        return <span style={{ fontWeight: 'bold', color: '#b00' }}>ウェイティング表で確認下さい</span>;
+                    }
+
+                    return (
+                        <div className="button-group">
+                            <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
+                            <button className='waiting-button' onClick={() => confirmMoveToWaiting(guest)}>W</button>
+                            <button
+                                className='invi-button'
+                                onClick={() => {
+                                    handlePartialCheckInClick(guest);
+                                    closeModal();
+                                }}
+                            >
+                                B
+                            </button>
+                        </div>
+                    );
+                }
             })),
             buttons: [
                 {
@@ -635,7 +677,7 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-    const handleMoveToWaiting = async (guestId) => {
+     const handleMoveToWaiting = async (guestId) => {
         try {
             const nextIndex = await getNextWaitingIndex();
             await setDoc(doc(db, "breakfastGuests", guestId), {
@@ -649,6 +691,36 @@ const BreakfastCheckin = () => {
         } catch (error) {
             console.error('Error moving to waiting:', error);
         }
+    };
+
+    const confirmMoveToWaiting = (guest) => {
+        // Nếu đã ở trạng thái waiting thì cảnh báo luôn
+        if (guest.status === 'waiting') {
+            setModalContent({
+                title: '確認',
+                message: 'ウェイティングのお客様です。',
+                buttons: [{ text: '戻る', action: () => closeModal() }],
+            });
+            setIsModalOpen(true);
+            return;
+        }
+
+        // Nếu chưa thì hỏi xác nhận
+        setModalContent({
+            title: '確認',
+            message: `部屋 ${guest.ルーム}　${guest.名前}様をウェイティングに移動しますか？`,
+            buttons: [
+                {
+                    text: 'はい',
+                    action: async () => {
+                        await handleMoveToWaiting(guest.id);
+                        closeModal();
+                    },
+                },
+                { text: 'いいえ', action: () => closeModal() },
+            ],
+        });
+        setIsModalOpen(true);
     };
 
     const handleMoveToArrivedFromWaiting = async (guest) => {
@@ -1415,7 +1487,7 @@ const BreakfastCheckin = () => {
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>{guest.人数}</td>
                                         <td style={{ textAlign: 'center', backgroundColor: '#FAF9F6' }}>
                                             <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
-                                            <button className='waiting-button' onClick={() => handleMoveToWaiting(guest.id)}>W</button>
+                                            <button className='waiting-button' onClick={() => confirmMoveToWaiting(guest)}>W</button>
                                             <button className='invi-button' onClick={() => handlePartialCheckInClick(guest)}>B</button>
                                         </td>
                                     </tr>

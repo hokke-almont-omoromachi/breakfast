@@ -435,3 +435,8 @@ th {
     border-radius: 8px;
     width: 450px;
 }
+
+.button-group {
+    display: flex;
+    gap: 4px; /* Hoặc 2px nếu muốn sát hơn */
+}

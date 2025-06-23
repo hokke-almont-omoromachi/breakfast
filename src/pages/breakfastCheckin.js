@@ -43,6 +43,7 @@ const BreakfastCheckin = () => {
     const gotoFull = () => { navigate('/fullSeat'); };
 
     const VALID_ROOMS = [
+        9999,
         ...Array.from({ length: 20 }, (_, i) => 301 + i),
         ...Array.from({ length: 20 }, (_, i) => 401 + i),
         ...Array.from({ length: 20 }, (_, i) => 501 + i),
@@ -339,12 +340,12 @@ const BreakfastCheckin = () => {
         const parsedRoomName = parseInt(rawRoomName);
 
         if (!rawRoomName) {
-            setInputError('部屋番号を入力して下さい！');
+            setInputError('部屋番号を入力して下さい！ 外来の場合：9999を入力して下さい。');
             return;
         }
 
         if (isNaN(parsedRoomName) || !VALID_ROOMS.includes(parsedRoomName)) {
-            setInputError('有効な部屋番号を入力して下さい。（例：301-1310）');
+            setInputError('有効な部屋番号を入力して下さい。（例：301-1310）外来の場合：9999を入力して下さい。');
             return;
         }
 

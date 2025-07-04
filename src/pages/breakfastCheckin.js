@@ -42,6 +42,8 @@ const BreakfastCheckin = () => {
     const goToGuest = () => { navigate('/guest'); };
     const gotoFull = () => { navigate('/fullSeat'); };
 
+    const previousModalContentRef = useRef(null);
+
     const VALID_ROOMS = [
         9999,
         ...Array.from({ length: 20 }, (_, i) => 301 + i),
@@ -98,7 +100,7 @@ const BreakfastCheckin = () => {
         };
         }, []);
 
-        useEffect(() => {
+    useEffect(() => {
             // Lọc tất cả khách có status 'waiting' hoặc đã từng 'waiting' và có isGuided = true
             const allWaiting = [
                 ...data.filter(g => g.status === 'waiting' || g.isGuided === true).map(g => ({ ...g, source: 'guest' })),
@@ -129,14 +131,6 @@ const BreakfastCheckin = () => {
         calculateTotalPurchasedGuests(inputList);
     }, [inputList]);
 
-    const calculateTotalPurchasedGuests = (purchases) => {
-        const total = purchases.reduce(
-            (sum, purchase) => sum + (purchase.mealNum || 0),
-            0
-        );
-        setTotalPurchasedGuests(total);
-    };
-
     useEffect(() => {
         if (personalRoomInput && data.length > 0) {
             const roomData = data.find(d => String(d.ルーム).trim() === personalRoomInput.trim());
@@ -155,6 +149,14 @@ const BreakfastCheckin = () => {
             setPersonalRoomInput('');
         }
     }, [data, personalRoomInput]);
+
+    const calculateTotalPurchasedGuests = (purchases) => {
+        const total = purchases.reduce(
+            (sum, purchase) => sum + (purchase.mealNum || 0),
+            0
+        );
+        setTotalPurchasedGuests(total);
+    };
 
     const readExcelFile = async (file) => {
         try {
@@ -436,95 +438,43 @@ const BreakfastCheckin = () => {
             return;
         }
 
-    setModalContent({
-        title: '確認',
-        message: matchingGuests.map(guest => ({
-            text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
-            id: guest.id,
-            status: guest.status,
-            renderButton: () => (
-                <div className="button-group">
-                    <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
-                    <button className='waiting-button' onClick={() => confirmMoveToWaiting(guest)}>W</button>
-                    <button
-                        className='invi-button'
-                        onClick={() => {
-                            handlePartialCheckInClick(guest);
-                            closeModal();
-                        }}
-                    >
-                        B
-                    </button>
-                </div>
-            ),
-        })),
-        buttons: [
-            {
-                text: '一括チェックイン',
-                action: () => {
-                    handleCheckInAll(matchingGuests);
-                    closeModal();
-                },
-                style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' },
-            },
-            { text: '戻る', action: () => closeModal() },
-        ],
-    });
-    setIsModalOpen(true);
-};
-
-
-    const handleNameCheckIn = () => {
-        if (!nameInput.trim()) {
-            setModalContent({
-                title: '朝食未購入',
-                message: '名前を入力して下さい。',
-                buttons: [{ text: '戻る', action: () => closeModal() }],
-            });
-            setIsModalOpen(true);
-            return;
-        }
-
-        const matchingGuests = guestsData.filter(g =>　g.名前.toLowerCase().includes(nameInput.trim().toLowerCase())
-        );
-
-        if (matchingGuests.length === 0) {
-            setModalContent({
-                title: '朝食未購入',
-                message: '該当する名前の朝食購入データが見つかりません。',
-                buttons: [{ text: '戻る', action: () => closeModal() }],
-            });
-            setIsModalOpen(true);
-            return;
-        }
-
-        setModalContent({
+            const content = {
             title: '確認',
             message: matchingGuests.map(guest => ({
                 text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
                 id: guest.id,
                 status: guest.status,
-                renderButton: () => {
-                    if (guest.status === 'waiting') {
-                        return <span style={{ fontWeight: 'bold', color: '#b00' }}>ウェイティング表で確認下さい</span>;
-                    }
-
-                    return (
-                        <div className="button-group">
-                            <button className='checkin-button' onClick={() => handleIndividualCheckIn(guest)}>O</button>
-                            <button className='waiting-button' onClick={() => confirmMoveToWaiting(guest)}>W</button>
-                            <button
-                                className='invi-button'
-                                onClick={() => {
-                                    handlePartialCheckInClick(guest);
-                                    closeModal();
-                                }}
-                            >
-                                B
-                            </button>
-                        </div>
-                    );
-                }
+                renderButton: () => (
+                    <div className="button-group">
+                        <button
+                            className='checkin-button'
+                            onClick={() => {
+                                previousModalContentRef.current = content;
+                                handleIndividualCheckIn(guest, true);
+                            }}
+                        >
+                            O
+                        </button>
+                        <button
+                            className='waiting-button'
+                            onClick={() => {
+                                previousModalContentRef.current = content;
+                                confirmMoveToWaiting(guest, true);
+                            }}
+                        >
+                            W
+                        </button>
+                        <button
+                            className='invi-button'
+                            onClick={() => {
+                                previousModalContentRef.current = content;
+                                handlePartialCheckInClick(guest, true); // nút B
+                            }}
+                        >
+                            B
+                        </button>
+                    </div>
+                ),
             })),
             buttons: [
                 {
@@ -537,9 +487,137 @@ const BreakfastCheckin = () => {
                 },
                 { text: '戻る', action: () => closeModal() },
             ],
-        });
+        };
+
+        previousModalContentRef.current = content; // Ghi rõ ở đây cũng OK
+        setModalContent(content);
         setIsModalOpen(true);
-    };
+        };
+
+    const handleNameCheckIn = () => {
+            if (!nameInput.trim()) {
+                setModalContent({
+                    title: '入力エラー',
+                    message: '名前を入力して下さい。',
+                    buttons: [{ text: '戻る', action: () => closeModal() }],
+                });
+                setIsModalOpen(true);
+                return;
+            }
+
+            const searchName = nameInput.trim().toLowerCase();
+
+            const matchingGuests = guestsData.filter(g =>
+                g.名前 && String(g.名前).toLowerCase().includes(searchName) &&
+                g.status !== 'cancelled'
+            );
+
+            if (matchingGuests.length === 0) {
+                setModalContent({
+                    title: '未登録',
+                    message: '該当する名前の朝食購入データが見つかりません。',
+                    buttons: [{ text: '戻る', action: () => closeModal() }],
+                });
+                setIsModalOpen(true);
+                return;
+            }
+
+           // if (matchingGuests.length === 1 && matchingGuests[0].status === 'arrived') {
+            //    setModalContent({
+            //        title: '確認',
+            //        message: 'すでにチェックイン済みです。',
+             //       buttons: [{ text: '閉じる', action: () => closeModal() }],
+             //   });
+             //   setIsModalOpen(true);
+            //    return;
+           // }
+
+            const firstModalContent = {
+                title: '確認',
+                message: matchingGuests.map(guest => ({
+                    text: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
+                    id: guest.id,
+                    status: guest.status,
+                    renderButton: () => {
+                        if (guest.status === 'waiting') {
+                            return <span style={{ fontWeight: 'bold', color: '#b00' }}>ウェイティング表で確認下さい</span>;
+                        }
+
+                        return (
+                            <div className="button-group">
+                                <button
+                                    className='checkin-button'
+                                    onClick={() => {
+                                        previousModalContentRef.current = firstModalContent;
+                                        handleIndividualCheckIn(guest, true);
+                                    }}
+                                >
+                                    O
+                                </button>
+                                <button
+                                    className='waiting-button'
+                                    onClick={() => {
+                                        previousModalContentRef.current = firstModalContent;
+                                        confirmMoveToWaiting(guest, true);
+                                    }}
+                                >
+                                    W
+                                </button>
+                                <button
+                                    className='invi-button'
+                                    onClick={() => {
+                                        previousModalContentRef.current = firstModalContent;
+                                        handlePartialCheckInClick(guest, true);
+                                    }}
+                                >
+                                    B
+                                </button>
+                            </div>
+                        );
+                    }
+                })),
+                buttons: [
+                    {
+                        text: '一括チェックイン',
+                        action: () => {
+                            const hasWaitingGuest = matchingGuests.some(g => g.status === 'waiting');
+
+                            if (hasWaitingGuest) {
+                                previousModalContentRef.current = firstModalContent;
+
+                                setModalContent({
+                                    title: 'ウェイティングのお客様がいらっしゃいます。',
+                                    message: 'ウェイティング表からチェックインして下さい。',
+                                    buttons: [{
+                                        text: '戻る',
+                                        action: () => {
+                                            if (previousModalContentRef.current) {
+                                                setModalContent(previousModalContentRef.current);
+                                                setIsModalOpen(true);
+                                            } else {
+                                                closeModal();
+                                            }
+                                        }
+                                    }]
+                                });
+                                setIsModalOpen(true);
+                            } else {
+                                handleCheckInAll(matchingGuests);
+                                closeModal();
+                            }
+                        },
+                        style: matchingGuests.some(g => g.status !== 'arrived') ? {} : { display: 'none' },
+                    },
+                    {
+                        text: '戻る',
+                        action: () => closeModal()
+                    }
+                ]
+            };
+
+            setModalContent(firstModalContent);
+            setIsModalOpen(true);
+        };
 
     const [editFixedIndexModal, setEditFixedIndexModal] = useState({
             open: false,
@@ -632,6 +710,10 @@ const BreakfastCheckin = () => {
     const handleCancelCheckIn = async (guestId) => {
         const guestToCancel = guestsData.find(guest => guest.id === guestId);
         if (guestToCancel) {
+
+            // LƯU LẠI modal hiện tại
+            previousModalContentRef.current = modalContent;
+
             setModalContent({
                 title: '確認',
                 message: `部屋 ${guestToCancel.ルーム} ${guestToCancel.名前}様のチェックインを取り消しますか？`,
@@ -640,7 +722,14 @@ const BreakfastCheckin = () => {
                         text: 'はい',
                         action: async () => {
                             try {
-                                await setDoc(doc(db, "breakfastGuests", guestId), { status: 'not_arrived', arrivedTime: null, waitingTime: null, fixedIndex: null, isGuided: false, guidedTime: null }, { merge: true });
+                                await setDoc(doc(db, "breakfastGuests", guestId), {
+                                    status: 'not_arrived',
+                                    arrivedTime: null,
+                                    waitingTime: null,
+                                    fixedIndex: null,
+                                    isGuided: false,
+                                    guidedTime: null
+                                }, { merge: true });
                                 closeModal();
                             } catch (error) {
                                 console.error('Error cancelling check-in:', error);
@@ -653,14 +742,24 @@ const BreakfastCheckin = () => {
                             }
                         },
                     },
-                    { text: 'いいえ', action: () => closeModal() },
+                    {
+                        text: 'いいえ',
+                        action: () => {
+                            if (previousModalContentRef.current) {
+                                setModalContent(previousModalContentRef.current);
+                                setIsModalOpen(true);
+                            } else {
+                                closeModal();
+                            }
+                        }
+                    },
                 ],
             });
             setIsModalOpen(true);
         }
     };
 
-    const handleIndividualCheckIn = (guest) => {
+    const handleIndividualCheckIn = (guest, fromRoom = false) => {
         setModalContent({
             title: '確認',
             message: `部屋 ${guest.ルーム}　${guest.名前}様　${guest.人数}名`,
@@ -672,13 +771,24 @@ const BreakfastCheckin = () => {
                         closeModal();
                     },
                 },
-                { text: '戻る', action: () => closeModal() },
+                {
+                    text: '戻る',
+                    action: () => {
+                        const prev = previousModalContentRef.current;
+                        if (fromRoom && prev) {
+                            setModalContent(prev);
+                            setIsModalOpen(true);
+                        } else {
+                            closeModal();
+                        }
+                    }
+                },
             ],
         });
         setIsModalOpen(true);
     };
 
-     const handleMoveToWaiting = async (guestId) => {
+    const handleMoveToWaiting = async (guestId) => {
         try {
             const nextIndex = await getNextWaitingIndex();
             await setDoc(doc(db, "breakfastGuests", guestId), {
@@ -694,19 +804,28 @@ const BreakfastCheckin = () => {
         }
     };
 
-    const confirmMoveToWaiting = (guest) => {
-        // Nếu đã ở trạng thái waiting thì cảnh báo luôn
+    const confirmMoveToWaiting = (guest, fromRoom = false) => {
         if (guest.status === 'waiting') {
             setModalContent({
                 title: '確認',
                 message: 'ウェイティングのお客様です。',
-                buttons: [{ text: '戻る', action: () => closeModal() }],
+                buttons: [{
+                    text: '戻る',
+                    action: () => {
+                        const prev = previousModalContentRef.current;
+                        if (fromRoom && prev) {
+                            setModalContent(prev);
+                            setIsModalOpen(true);
+                        } else {
+                            closeModal();
+                        }
+                    }
+                }],
             });
             setIsModalOpen(true);
             return;
         }
 
-        // Nếu chưa thì hỏi xác nhận
         setModalContent({
             title: '確認',
             message: `部屋 ${guest.ルーム}　${guest.名前}様をウェイティングに移動しますか？`,
@@ -718,7 +837,18 @@ const BreakfastCheckin = () => {
                         closeModal();
                     },
                 },
-                { text: 'いいえ', action: () => closeModal() },
+                {
+                    text: '戻る',
+                    action: () => {
+                        const prev = previousModalContentRef.current;
+                        if (fromRoom && prev) {
+                            setModalContent(prev);
+                            setIsModalOpen(true);
+                        } else {
+                            closeModal();
+                        }
+                    }
+                },
             ],
         });
         setIsModalOpen(true);
@@ -877,7 +1007,7 @@ const BreakfastCheckin = () => {
         setIsModalOpen(true);
     };
 
-     const handleRefresh = async () => {
+    const handleRefresh = async () => {
         setModalContent({
             title: 'データ取消',
             message: 'データを取消しますか？',
@@ -971,7 +1101,12 @@ const BreakfastCheckin = () => {
         }
     };
 
-    const handlePartialCheckInClick = (guest) => {
+    const handlePartialCheckInClick = (guest, fromRoom = false) => {
+        if (fromRoom && previousModalContentRef.current) {
+            // Ẩn modal hiện tại
+            setIsModalOpen(false);
+        }
+
         setPartialCheckinData(guest);
         setPartialArrivedCount(1);
         setShowPartialModal(true);
@@ -989,8 +1124,8 @@ const BreakfastCheckin = () => {
                         arrivedTime: Date.now(),
                         waitingTime: null,
                         fixedIndex: null,
-                        isGuided: false, // Đặt lại isGuided
-                        guidedTime: null // Xóa guidedTime
+                        isGuided: false,
+                        guidedTime: null
                     };
                     await setDoc(doc(collection(db, "breakfastGuests"), arrivedGuestData.id), arrivedGuestData);
 
@@ -1005,10 +1140,14 @@ const BreakfastCheckin = () => {
                         arrivedTime: Date.now(),
                         waitingTime: null,
                         fixedIndex: null,
-                        isGuided: false, // Đặt lại isGuided
-                        guidedTime: null // Xóa guidedTime
+                        isGuided: false,
+                        guidedTime: null
                     }, { merge: true });
                 }
+
+                // ✅ Sau khi thao tác xong: đóng hoàn toàn modal
+                closePartialModal(false);
+
             } else {
                 console.warn(`ID ${guest.id} is not found`);
             }
@@ -1023,9 +1162,16 @@ const BreakfastCheckin = () => {
         }
     };
 
-    const closePartialModal = () => {
+
+    const closePartialModal = (returnToPreviousModal = true) => {
         setShowPartialModal(false);
         setPartialCheckinData(null);
+        if (returnToPreviousModal && previousModalContentRef.current) {
+            setModalContent(previousModalContentRef.current);
+            setIsModalOpen(true);
+        } else {
+            closeModal();
+        }
     };
 
     const handleCheckboxChange = (guestId) => {
@@ -1135,13 +1281,12 @@ const BreakfastCheckin = () => {
                                 <button
                                     onClick={() => {
                                         handleCheckInGuestPartial(partialCheckinData, partialArrivedCount);
-                                        closePartialModal();
                                     }}
                                 >
                                     バラチェックイン
                                 </button>
 
-                                <button onClick={closePartialModal} style={{ marginLeft: '10px' }}>
+                                <button onClick={() => closePartialModal(true)} style={{ marginLeft: '10px' }}>
                                     戻る
                                 </button>
                             </div>

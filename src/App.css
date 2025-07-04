@@ -349,6 +349,20 @@ th {
     opacity: 0.8;
   }
 
+.waiting2-button {
+    background-color: rgb(8, 11, 224)!important;;
+    color: white!important;;
+    border: none!important;
+    padding: 5px 10px!important;
+    margin-top: 5px!important;
+    margin-right: 5px;
+    cursor: pointer!important;
+  }
+  
+.waiting2-button:hover {
+    opacity: 0.8;
+  }
+
 .head-table {
     border: 1.2px solid #c0bebe;
     padding: 8px;

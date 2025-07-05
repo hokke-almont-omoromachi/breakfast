@@ -60,10 +60,11 @@ const BreakfastCheckin = () => {
     ];
 
     useEffect(() => {
+        // Lắng nghe thay đổi của khách từ collection "breakfastGuests"
         const unsubscribeGuests = onSnapshot(
             query(collection(db, "breakfastGuests"), orderBy("roomNumber")),
             (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'guest' })); // Thêm source
             setGuestsData(data);
             updateGuestStatistics(data);
             setData(data);
@@ -71,6 +72,7 @@ const BreakfastCheckin = () => {
             (error) => console.error('Data fetch error', error)
         );
 
+        // Lắng nghe thay đổi của khách từ collection "breakfastPurchases"
         const unsubscribePurchases = onSnapshot(
             query(collection(db, 'breakfastPurchases'), orderBy("purchaseTime")),
             (snapshot) => {
@@ -82,10 +84,10 @@ const BreakfastCheckin = () => {
                         status: data.status || 'purchase_only',
                         waitingTime: data.waitingTime || null,
                         fixedIndex: data.fixedIndex || null,
-                        source: 'purchase',
+                        source: 'purchase', // Thêm source
                         purchaseTime: data.purchaseTime || null,
-                        isGuided: data.isGuided || false, // Thêm trường isGuided
-                        guidedTime: data.guidedTime || null, // Thêm trường guidedTime
+                        isGuided: data.isGuided || false,
+                        guidedTime: data.guidedTime || null,
                     };
                 });
                 setInputList(purchases);
@@ -102,6 +104,7 @@ const BreakfastCheckin = () => {
 
     useEffect(() => {
             // Lọc tất cả khách có status 'waiting' hoặc đã từng 'waiting' và có isGuided = true
+            // Gộp cả khách từ guestsData và inputList (purchases)
             const allWaiting = [
                 ...data.filter(g => g.status === 'waiting' || g.isGuided === true).map(g => ({ ...g, source: 'guest' })),
                 ...inputList.filter(p => p.status === 'waiting' || p.isGuided === true).map(p => ({ ...p, source: 'purchase' }))
@@ -113,18 +116,25 @@ const BreakfastCheckin = () => {
                 .reduce((sum, p) => sum + (p.mealNum || 0), 0);
             setPurchaseWaitingCount(currentPurchaseWaitingCount);
 
-            // Sắp xếp danh sách chờ
-            const sortedWaiting = allWaiting.sort((a, b) => (a.fixedIndex || 0) - (b.fixedIndex || 0));
+            // Sắp xếp danh sách chờ theo fixedIndex
+            const sortedWaiting = allWaiting.sort((a, b) => {
+                // Ưu tiên các mục có isGuided = true hiển thị trước nếu fixedIndex giống nhau
+                if (a.fixedIndex === b.fixedIndex) {
+                    if (a.isGuided && !b.isGuided) return -1;
+                    if (!a.isGuided && b.isGuided) return 1;
+                }
+                return (a.fixedIndex || 0) - (b.fixedIndex || 0);
+            });
             setWaitingGuests(sortedWaiting);
 
-            // Đếm số lượng khách đang chờ thực sự (status === 'waiting') từ danh sách khách
-            let nonPurchaseWaitingCount = 0;
+            // Đếm số lượng khách đang chờ thực sự (status === 'waiting') từ cả hai nguồn
+            let totalCurrentWaitingCount = 0;
             sortedWaiting.forEach(guest => {
-                if (guest.source === 'guest' && guest.status === 'waiting') {
-                    nonPurchaseWaitingCount += guest.人数 || 0;
+                if (guest.status === 'waiting') {
+                    totalCurrentWaitingCount += (guest.source === 'guest' ? guest.人数 : guest.mealNum) || 0;
                 }
             });
-            setWaitingGuestsCount(nonPurchaseWaitingCount);
+            setWaitingGuestsCount(totalCurrentWaitingCount);
         }, [data, inputList]);
 
     useEffect(() => {
@@ -192,8 +202,8 @@ const BreakfastCheckin = () => {
                             status: "not_arrived",
                             waitingTime: null,
                             arrivedTime: null,
-                            isGuided: false, // Thêm trường isGuided mặc định
-                            guidedTime: null // Thêm trường guidedTime mặc định
+                            isGuided: false,
+                            guidedTime: null
                         });
                     }
                 }
@@ -239,8 +249,8 @@ const BreakfastCheckin = () => {
                 status: 'waiting',
                 waitingTime: Date.now(),
                 fixedIndex: nextIndex,
-                isGuided: false, // Đặt lại isGuided khi chuyển sang waiting
-                guidedTime: null // Xóa guidedTime
+                isGuided: false,
+                guidedTime: null
             }, { merge: true });
 
         } catch (error) {
@@ -283,8 +293,8 @@ const BreakfastCheckin = () => {
                     status: "not_arrived",
                     waitingTime: null,
                     arrivedTime: null,
-                    isGuided: false, // Thêm trường isGuided mặc định
-                    guidedTime: null // Thêm trường guidedTime mặc định
+                    isGuided: false,
+                    guidedTime: null
                 };
             }).filter(guest => guest.ルーム && guest.人数 > 0);
             setGuestsData(formattedData);
@@ -361,8 +371,8 @@ const BreakfastCheckin = () => {
                 waitingTime: null,
                 fixedIndex: null,
                 purchaseTime: Date.now(),
-                isGuided: false, // Thêm trường isGuided mặc định
-                guidedTime: null // Thêm trường guidedTime mặc định
+                isGuided: false,
+                guidedTime: null
             };
             await addDoc(collection(db, 'breakfastPurchases'), newItem);
             setRoomName('');
@@ -489,7 +499,7 @@ const BreakfastCheckin = () => {
             ],
         };
 
-        previousModalContentRef.current = content; // Ghi rõ ở đây cũng OK
+        previousModalContentRef.current = content;
         setModalContent(content);
         setIsModalOpen(true);
         };
@@ -521,16 +531,6 @@ const BreakfastCheckin = () => {
                 setIsModalOpen(true);
                 return;
             }
-
-           // if (matchingGuests.length === 1 && matchingGuests[0].status === 'arrived') {
-            //    setModalContent({
-            //        title: '確認',
-            //        message: 'すでにチェックイン済みです。',
-             //       buttons: [{ text: '閉じる', action: () => closeModal() }],
-             //   });
-             //   setIsModalOpen(true);
-            //    return;
-           // }
 
             const firstModalContent = {
                 title: '確認',
@@ -711,7 +711,6 @@ const BreakfastCheckin = () => {
         const guestToCancel = guestsData.find(guest => guest.id === guestId);
         if (guestToCancel) {
 
-            // LƯU LẠI modal hiện tại
             previousModalContentRef.current = modalContent;
 
             setModalContent({
@@ -796,8 +795,8 @@ const BreakfastCheckin = () => {
                 waitingTime: Date.now(),
                 fixedIndex: nextIndex,
                 arrivedTime: null,
-                isGuided: false, // Đặt lại isGuided khi chuyển sang waiting
-                guidedTime: null // Xóa guidedTime
+                isGuided: false,
+                guidedTime: null
             }, { merge: true });
         } catch (error) {
             console.error('Error moving to waiting:', error);
@@ -865,23 +864,23 @@ const BreakfastCheckin = () => {
                         try {
                             if (guest.source === 'guest') {
                                 await setDoc(doc(db, "breakfastGuests", guest.id), {
-                                    status: 'arrived', // Chuyển trạng thái chính thức sang 'arrived'
-                                    arrivedTime: Date.now(), // Cập nhật thời gian đến
-                                    waitingTime: guest.waitingTime, // Giữ lại waitingTime để hiển thị lịch sử
-                                    fixedIndex: guest.fixedIndex, // Giữ lại fixedIndex để hiển thị lịch sử
-                                    isGuided: true, // Đánh dấu là đã được hướng dẫn
-                                    guidedTime: Date.now() // Thời gian hướng dẫn
+                                    status: 'arrived',
+                                    arrivedTime: Date.now(),
+                                    waitingTime: guest.waitingTime,
+                                    fixedIndex: guest.fixedIndex,
+                                    isGuided: true,
+                                    guidedTime: Date.now()
                                 }, { merge: true });
                             } else if (guest.source === 'purchase') {
                                 await setDoc(doc(db, "breakfastPurchases", guest.id), {
-                                    status: 'arrived', // Chuyển trạng thái chính thức sang 'arrived'
-                                    waitingTime: guest.waitingTime, // Giữ lại waitingTime
-                                    fixedIndex: guest.fixedIndex, // Giữ lại fixedIndex
-                                    isGuided: true, // Đánh dấu là đã được hướng dẫn
-                                    guidedTime: Date.now() // Thời gian hướng dẫn
+                                    status: 'arrived',
+                                    waitingTime: guest.waitingTime,
+                                    fixedIndex: guest.fixedIndex,
+                                    isGuided: true,
+                                    guidedTime: Date.now()
                                 }, { merge: true });
                             }
-                            closeModal(); // Đóng modal sau khi xác nhận
+                            closeModal();
                         } catch (error) {
                             console.error('Error moving to arrived:', error);
                             setModalContent({
@@ -911,7 +910,6 @@ const BreakfastCheckin = () => {
                             const guestsCollectionRef = collection(db, "breakfastGuests");
                             const purchasesCollectionRef = collection(db, "breakfastPurchases");
 
-                            // Xóa khách từ breakfastGuests có status là 'waiting' hoặc 'isGuided' là true
                             const guestsSnapshot = await getDocs(query(guestsCollectionRef, where('status', '==', 'waiting')));
                             const guidedGuestsSnapshot = await getDocs(query(guestsCollectionRef, where('isGuided', '==', true)));
 
@@ -921,7 +919,6 @@ const BreakfastCheckin = () => {
                             ];
                             await Promise.all(deleteGuestPromises);
 
-                            // Xóa khách từ breakfastPurchases có status là 'waiting' hoặc 'isGuided' là true
                             const purchaseSnapshot = await getDocs(query(purchasesCollectionRef, where('status', '==', 'waiting')));
                             const guidedPurchaseSnapshot = await getDocs(query(purchasesCollectionRef, where('isGuided', '==', true)));
 
@@ -968,7 +965,6 @@ const BreakfastCheckin = () => {
                     action: async () => {
                         try {
                             for (const guest of selectedWaitingGuests) {
-                                // Logic tương tự handleMoveToArrivedFromWaiting nhưng không hiển thị modal cho từng người
                                 if (guest.source === 'guest') {
                                     await setDoc(doc(db, "breakfastGuests", guest.id), {
                                         status: 'arrived',
@@ -1021,7 +1017,7 @@ const BreakfastCheckin = () => {
                             setTotalGuests(0);
                             setCheckedInGuests(0);
                             await handleClearAllPurchases();
-                            await handleClearWaitingGuests(); 
+                            await handleClearWaitingGuests();
 
                             setModalContent({
                                 title: 'データ取消',
@@ -1103,54 +1099,133 @@ const BreakfastCheckin = () => {
 
     const handlePartialCheckInClick = (guest, fromRoom = false) => {
         if (fromRoom && previousModalContentRef.current) {
-            // Ẩn modal hiện tại
-            setIsModalOpen(false);
+            setIsModalOpen(false); // Ẩn modal hiện tại nếu đến từ "Room Check" hoặc "Name Check"
+        }
+        setPartialCheckinData(guest);
+        // Đặt số lượng khách đến mặc định là 1 hoặc số lượng khách tối đa nếu khách chỉ có 1 người
+        setPartialArrivedCount(guest.人数 === 1 ? 1 : 1);
+        setShowPartialModal(true);
+
+    };
+
+    // Hàm mới cho nút WB trong bảng Waiting
+    const handleWaitingPartialCheckInClick = (guest) => {
+        // Kiểm tra nếu khách đã được hướng dẫn (isGuided) thì không cho phép partial check-in
+        if (guest.isGuided) {
+            setModalContent({
+                title: '確認',
+                message: 'このお客様はすでに案内済みです。',
+                buttons: [{ text: '戻る', action: () => closeModal() }],
+            });
+            setIsModalOpen(true);
+            return;
         }
 
+        setShowPartialModal(false); // Đảm bảo modal cũ đóng trước khi mở modal mới
         setPartialCheckinData(guest);
-        setPartialArrivedCount(1);
+        // Đặt số lượng khách đến mặc định là 1 hoặc số lượng khách tối đa nếu khách chỉ có 1 người
+        const guestCount = guest.source === 'guest' ? guest.人数 : guest.mealNum;
+        setPartialArrivedCount(guestCount === 1 ? 1 : 1);
         setShowPartialModal(true);
     };
 
-    const handleCheckInGuestPartial = async (guest, arrivedCount) => {
-        try {
-            if (guest) {
-                if (arrivedCount < guest.人数) {
-                    const arrivedGuestData = {
-                        ...guest,
-                        人数: arrivedCount,
-                        status: 'arrived',
-                        id: `${guest.id}-arrived-${Date.now()}`,
-                        arrivedTime: Date.now(),
-                        waitingTime: null,
-                        fixedIndex: null,
-                        isGuided: false,
-                        guidedTime: null
-                    };
-                    await setDoc(doc(collection(db, "breakfastGuests"), arrivedGuestData.id), arrivedGuestData);
 
-                    await setDoc(doc(db, "breakfastGuests", guest.id), {
-                        ...guest,
-                        人数: guest.人数 - arrivedCount,
-                    }, { merge: true });
+         const handleCheckInGuestPartial = async (guest, arrivedCount) => {
+        try {
+            if (!guest) {
+                console.warn("Guest data is null or undefined for partial check-in.");
+                return;
+            }
+
+            const isFromGuestsCollection = guest.source === 'guest';
+            const collectionName = isFromGuestsCollection ? "breakfastGuests" : "breakfastPurchases";
+            const originalGuestRef = doc(db, collectionName, guest.id);
+
+            const originalGuestTotal = isFromGuestsCollection ? guest.人数 : guest.mealNum;
+
+            if (arrivedCount < originalGuestTotal) {
+                // Kịch bản: Check-in một phần
+                // 1. Tạo một tài liệu mới cho phần 'arrived'
+                const arrivedGuestData = {
+                    ...guest, // Sao chép tất cả các thuộc tính hiện có của khách (bao gồm cả '名前')
+                    id: `${guest.id}-arrived-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                    status: 'arrived',
+                    arrivedTime: Date.now(),
+                    // isGuided chỉ là true nếu khách ban đầu ở trạng thái 'waiting'
+                    isGuided: (guest.status === 'waiting'),
+                    // guidedTime chỉ có giá trị nếu isGuided là true
+                    guidedTime: (guest.status === 'waiting') ? Date.now() : null,
+                    // Đặt số lượng chính xác cho phần đã đến
+                    ...(isFromGuestsCollection ? { 人数: arrivedCount } : { mealNum: arrivedCount }),
+                    // Đảm bảo waitingTime và fixedIndex được giữ lại nếu là khách đang chờ/đã hướng dẫn, nếu không thì đặt null
+                    waitingTime: (guest.status === 'waiting' || guest.isGuided) ? guest.waitingTime : null,
+                    fixedIndex: (guest.status === 'waiting' || guest.isGuided) ? guest.fixedIndex : null,
+                };
+                // Loại bỏ ID của tài liệu gốc để tránh xung đột khi tạo tài liệu mới
+                // delete arrivedGuestData.id; // DÒNG NÀY ĐÃ BỊ XÓA
+
+                await setDoc(doc(db, collectionName, arrivedGuestData.id), arrivedGuestData);
+
+                // 2. Cập nhật tài liệu gốc cho phần còn lại
+                const remainingCount = originalGuestTotal - arrivedCount;
+                let updateData = {
+                    // Bắt đầu với các thuộc tính cơ bản cần giữ lại
+                    ...(isFromGuestsCollection ? { 人数: remainingCount } : { mealNum: remainingCount }),
+                    arrivedTime: null // Đảm bảo phần còn lại không có arrivedTime
+                };
+
+                // Explicitly set status and waiting related fields based on original guest's status
+                // Dòng này đã được thay đổi để chỉ dựa vào guest.status === 'waiting'
+                if (guest.status === 'waiting') {
+                    // If original was waiting, remaining part stays waiting
+                    updateData.status = 'waiting';
+                    updateData.waitingTime = guest.waitingTime;
+                    updateData.fixedIndex = guest.fixedIndex;
+                    updateData.isGuided = guest.isGuided; // Giữ nguyên isGuided ban đầu cho khách chờ
+                    updateData.guidedTime = guest.guidedTime; // Giữ nguyên guidedTime ban đầu cho khách chờ
                 } else {
-                    await setDoc(doc(db, "breakfastGuests", guest.id), {
-                        ...guest,
-                        status: 'arrived',
-                        arrivedTime: Date.now(),
-                        waitingTime: null,
-                        fixedIndex: null,
-                        isGuided: false,
-                        guidedTime: null
-                    }, { merge: true });
+                    // If original was NOT waiting (e.g., 'not_arrived' or 'purchase_only'),
+                    // the remaining part should be 'not_arrived' and clear all waiting flags.
+                    updateData.status = 'not_arrived';
+                    updateData.waitingTime = null;
+                    updateData.fixedIndex = null;
+                    updateData.isGuided = false;
+                    updateData.guidedTime = null;
                 }
 
-                // ✅ Sau khi thao tác xong: đóng hoàn toàn modal
-                closePartialModal(false);
+                // Sao chép các thuộc tính khác từ guest gốc mà không bị ghi đè bởi các cờ trạng thái
+                // Đảm bảo ルーム/roomName, 名前 được giữ lại
+                const propertiesToKeep = ['ルーム', 'roomNumber', '名前', 'roomName', 'purchaseTime'];
+                propertiesToKeep.forEach(prop => {
+                    if (guest.hasOwnProperty(prop)) {
+                        updateData[prop] = guest[prop];
+                    }
+                });
+                await setDoc(originalGuestRef, updateData, { merge: true });
 
             } else {
-                console.warn(`ID ${guest.id} is not found`);
+                // Kịch bản: Check-in toàn bộ (arrivedCount === originalGuestTotal)
+                const updateData = {
+                    status: 'arrived',
+                    arrivedTime: Date.now(),
+                    // isGuided và guidedTime chỉ được set nếu khách ban đầu là 'waiting' hoặc đã 'isGuided'
+                    isGuided: (guest.status === 'waiting' || guest.isGuided),
+                    guidedTime: (guest.status === 'waiting' || guest.isGuided) ? Date.now() : null,
+                };
+                // Xóa các trường liên quan đến chờ nếu nó không phải là khách đang chờ ban đầu
+                if (guest.status === 'waiting' || guest.isGuided) {
+                    updateData.waitingTime = guest.waitingTime; // Giữ lại cho lịch sử
+                    updateData.fixedIndex = guest.fixedIndex; // Giữ lại cho lịch sử
+                } else {
+                    updateData.waitingTime = null;
+                    updateData.fixedIndex = null;
+                }
+
+                await setDoc(originalGuestRef, updateData, { merge: true });
             }
+
+            closePartialModal(false); // Đóng hoàn toàn modal sau khi thao tác
+
         } catch (error) {
             console.error('Check-In status error:', error);
             setModalContent({
@@ -1161,6 +1236,8 @@ const BreakfastCheckin = () => {
             setIsModalOpen(true);
         }
     };
+
+
 
 
     const closePartialModal = (returnToPreviousModal = true) => {
@@ -1262,16 +1339,30 @@ const BreakfastCheckin = () => {
                     <div className="modal-overlay">
                         <div className="modal-content">
                             <h2>バラチェックイン</h2>
-                            <p>部屋: {partialCheckinData.ルーム}
-                                {partialCheckinData.名前}様
-                                {partialCheckinData.人数}名</p>
+                            {/* Tính toán số lượng khách hiện tại một cách an toàn */}
+                            {/* Sử dụng || để ưu tiên 人数 (từ guest) hoặc mealNum (từ purchase), mặc định là 0 */}
+                            {(() => {
+                                const displayRoom = partialCheckinData.ルーム || partialCheckinData.roomName || ' '; // Ưu tiên ルーム, sau đó là roomName
+                                const displayGuestCount = partialCheckinData.人数 || partialCheckinData.mealNum || 0; // Ưu tiên 人数, sau đó là mealNum
+
+                                return (
+                                    <p>
+                                        部屋: {displayRoom}
+                                        {partialCheckinData.名前 || ''}様 {/* Tên khách */}
+                                        {displayGuestCount}名 {/* SỐ LƯỢNG KHÁCH ĐÃ ĐƯỢC TÍNH TOÁN AN TOÀN */}
+                                    </p>
+                                );
+                            })()}
+
                             <label>
                                 到着人数:
                                 <select
                                     value={partialArrivedCount}
                                     onChange={(e) => setPartialArrivedCount(Number(e.target.value))}
                                 >
-                                    {Array.from({ length: partialCheckinData.人数 }, (_, i) => (
+                                    {/* Tạo các option từ 1 đến số lượng khách hiện tại */}
+                                    {/* Sử dụng một biến để đảm bảo Array.from nhận được một số hợp lệ */}
+                                    {Array.from({ length: partialCheckinData.人数 || partialCheckinData.mealNum || 0 }, (_, i) => ( // Ưu tiên 人数, sau đó là mealNum
                                         <option key={i} value={i + 1}>{i + 1} 名</option>
                                     ))}
                                 </select>
@@ -1293,6 +1384,7 @@ const BreakfastCheckin = () => {
                         </div>
                     </div>
                 )}
+
 
             <p style={{ color: '#811121', fontSize: '20px', fontWeight: 'bold' }}>本日人数 <span style={{ color: 'red', fontSize: '30px', fontWeight: 'bold' }}>{totalGuests} </span> 名</p>
             <p>
@@ -1445,7 +1537,6 @@ const BreakfastCheckin = () => {
                     className="batch-checkin-btn"
                     onClick={handleBatchCheckInWaiting}
                     disabled={selectedWaitingGuests.length === 0}
-                    // Giữ marginLeft nếu muốn khoảng cách ban đầu trên màn hình lớn
                     style={{ marginLeft: '10px', backgroundColor: "green"}}
                 >
                     一括 O
@@ -1478,22 +1569,17 @@ const BreakfastCheckin = () => {
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>名前</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>人数</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
-                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>状況</th>{/* Thêm cột Tình trạng */}
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>状況</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
                         </tr>
                         </thead>
 
                         <tbody>
                         {
-                            (() => {
-                            const fixedIndexGroups = waitingGuests.reduce((acc, guest) => {
-                                const index = guest.fixedIndex;
-                                acc[index] = acc[index] ? [...acc[index], guest] : [guest];
-                                return acc;
-                            }, {});
-
-                            return waitingGuests.map((guest) => {
-                                const isGroup = fixedIndexGroups[guest.fixedIndex]?.length > 1;
+                            // Sắp xếp lại để các mục có cùng fixedIndex hiển thị liền kề,
+                            // và mục isGuided hiển thị trước mục waiting
+                            waitingGuests.map((guest) => {
+                                const isGroup = waitingGuests.filter(g => g.fixedIndex === guest.fixedIndex).length > 1;
                                 const rowStyle = {
                                 textAlign: 'center',
                                 backgroundColor: isGroup ? '#D6F0F5' : '#FAF9F6',
@@ -1536,21 +1622,31 @@ const BreakfastCheckin = () => {
                                         })
                                         : ''}
                                     </td>
-                                    {/* Cột Tình trạng mới */}
                                     <td style={rowStyle}>
                                         {guest.isGuided && guest.guidedTime
                                             ? `${new Date(guest.guidedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} に案内済`
-                                            : ''}
+                                            :''}
                                     </td>
                                     <td style={rowStyle}>
                                     {/* Chỉ hiển thị nút 'O' nếu khách đang ở trạng thái 'waiting' */}
                                     {guest.status === 'waiting' && (
-                                        <button
-                                            className='checkin-button'
-                                            onClick={() => handleMoveToArrivedFromWaiting(guest)}
-                                        >
-                                            O
-                                        </button>
+                                        <>
+                                            <button
+                                                className='checkin-button'
+                                                onClick={() => handleMoveToArrivedFromWaiting(guest)}
+                                            >
+                                                O
+                                            </button>
+                                            {/* Nút WB mới */}
+                                            {(guest.source === 'guest' && guest.人数 > 1) || (guest.source === 'purchase' && guest.mealNum > 1) ? (
+                                                <button
+                                                    className='waiting2-button' // Sử dụng style tương tự nút B
+                                                    onClick={() => handleWaitingPartialCheckInClick(guest)}
+                                                >
+                                                    BW
+                                                </button>
+                                            ) : null}
+                                        </>
                                     )}
                                     <button
                                         className='writing-button'
@@ -1567,8 +1663,7 @@ const BreakfastCheckin = () => {
                                     </td>
                                 </tr>
                                 );
-                            });
-                            })()
+                            })
                         }
                         </tbody>
                     </table>

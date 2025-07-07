@@ -36,6 +36,7 @@ const BreakfastCheckin = () => {
     const [personalRoomInput, setPersonalRoomInput] = useState('');
     const [selectedNotArrivedGuests, setSelectedNotArrivedGuests] = useState([]);
     const [selectedWaitingGuests, setSelectedWaitingGuests] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
     const navigate = useNavigate();
     const goToHome = () => { navigate('/home'); };
     const goToRestaurant = () => navigate('/restaurant');
@@ -832,8 +833,11 @@ const BreakfastCheckin = () => {
                 {
                     text: 'はい',
                     action: async () => {
+                        if (isProcessing) return;
+                        setIsProcessing(true);
                         await handleMoveToWaiting(guest.id);
-                        closeModal();
+                        setIsProcessing(false); // nếu bạn muốn bật lại nút sau này
+                        closeModal(); // hoặc đặt trước nếu bạn muốn modal biến mất ngay
                     },
                 },
                 {
@@ -1326,7 +1330,7 @@ const BreakfastCheckin = () => {
                             )}
                             <div className="modal-buttons">
                                 {modalContent.buttons.map((button, index) => (
-                                    <button key={index} onClick={button.action} style={button.style}>
+                                    <button key={index} onClick={button.action} disabled={isProcessing}  style={button.style}>
                                         {button.text}
                                     </button>
                                 ))}
@@ -1603,7 +1607,9 @@ const BreakfastCheckin = () => {
                                         )}
                                     </td>
                                     <td style={indexStyle}>
-                                    {guest.fixedIndex}
+                                    <span className={guest.status === 'waiting' ? "blink-red" : ""}>
+                                        {guest.fixedIndex}
+                                    </span>
                                     </td>
                                     <td style={rowStyle}>
                                     {guest.source === 'guest' ? guest.ルーム : guest.roomName}

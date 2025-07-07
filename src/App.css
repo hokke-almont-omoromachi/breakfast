@@ -454,3 +454,8 @@ th {
     display: flex;
     gap: 4px; /* Hoặc 2px nếu muốn sát hơn */
 }
+
+.blink-red {
+  color: red;
+  font-weight: bold;
+}

@@ -36,7 +36,8 @@ const BreakfastCheckin = () => {
     const [personalRoomInput, setPersonalRoomInput] = useState('');
     const [selectedNotArrivedGuests, setSelectedNotArrivedGuests] = useState([]);
     const [selectedWaitingGuests, setSelectedWaitingGuests] = useState([]);
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [processingButtons, setProcessingButtons] = useState({});
+
     const navigate = useNavigate();
     const goToHome = () => { navigate('/home'); };
     const goToRestaurant = () => navigate('/restaurant');
@@ -414,6 +415,17 @@ const BreakfastCheckin = () => {
         const day = String(today.getDate()).padStart(2, '0');
         return `${year}年${month}月${day}日`;
     };
+
+    const withButtonProcessing = async (buttonKey, asyncFn) => {
+        if (processingButtons[buttonKey]) return;
+
+        setProcessingButtons(prev => ({ ...prev, [buttonKey]: true }));
+        try {
+            await asyncFn();
+        } finally {
+            setProcessingButtons(prev => ({ ...prev, [buttonKey]: false }));
+        }
+        };
 
     const handleRoomCheckIn = () => {
         if (!roomNumber.trim()) {
@@ -831,29 +843,28 @@ const BreakfastCheckin = () => {
             message: `部屋 ${guest.ルーム}　${guest.名前}様をウェイティングに移動しますか？`,
             buttons: [
                 {
-                    text: 'はい',
-                    action: async () => {
-                        if (isProcessing) return;
-                        setIsProcessing(true);
-                        await handleMoveToWaiting(guest.id);
-                        setIsProcessing(false); // nếu bạn muốn bật lại nút sau này
-                        closeModal(); // hoặc đặt trước nếu bạn muốn modal biến mất ngay
-                    },
+                text: 'はい',
+                action: () =>
+                    withButtonProcessing('modal-yes', async () => {
+                    await handleMoveToWaiting(guest.id);
+                    closeModal();
+                    }),
+                disableWhenProcessing: 'modal-yes',
                 },
                 {
-                    text: '戻る',
-                    action: () => {
-                        const prev = previousModalContentRef.current;
-                        if (fromRoom && prev) {
-                            setModalContent(prev);
-                            setIsModalOpen(true);
-                        } else {
-                            closeModal();
-                        }
+                text: '戻る',
+                action: () => {
+                    const prev = previousModalContentRef.current;
+                    if (fromRoom && prev) {
+                    setModalContent(prev);
+                    setIsModalOpen(true);
+                    } else {
+                    closeModal();
                     }
                 },
-            ],
-        });
+                }
+            ]
+            });
         setIsModalOpen(true);
     };
 
@@ -1330,10 +1341,15 @@ const BreakfastCheckin = () => {
                             )}
                             <div className="modal-buttons">
                                 {modalContent.buttons.map((button, index) => (
-                                    <button key={index} onClick={button.action} disabled={isProcessing}  style={button.style}>
+                                    <button
+                                        key={index}
+                                        onClick={button.action}
+                                        disabled={button.disableWhenProcessing && processingButtons[button.disableWhenProcessing]}
+                                        style={button.style}
+                                    >
                                         {button.text}
                                     </button>
-                                ))}
+                                    ))}
                             </div>
                         </div>
                     </div>
@@ -1374,12 +1390,15 @@ const BreakfastCheckin = () => {
 
                             <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
                                 <button
-                                    onClick={() => {
-                                        handleCheckInGuestPartial(partialCheckinData, partialArrivedCount);
-                                    }}
-                                >
+                                    onClick={() =>
+                                        withButtonProcessing('partial-checkin', async () => {
+                                        await handleCheckInGuestPartial(partialCheckinData, partialArrivedCount);
+                                        })
+                                    }
+                                    disabled={processingButtons['partial-checkin']}
+                                    >
                                     バラチェックイン
-                                </button>
+                                    </button>
 
                                 <button onClick={() => closePartialModal(true)} style={{ marginLeft: '10px' }}>
                                     戻る

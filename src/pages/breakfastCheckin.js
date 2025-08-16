@@ -342,6 +342,26 @@ const BreakfastCheckin = () => {
         } setNameInputValue('');
     };
 
+    const updateRemarks = async (guest, newValue) => {
+        try {
+            if (guest.source === "guest") {
+            await setDoc(
+                doc(db, "breakfastGuests", guest.id),
+                { remarks: newValue },
+                { merge: true }
+            );
+            } else if (guest.source === "purchase") {
+            await setDoc(
+                doc(db, "breakfastPurchases", guest.id),
+                { remarks: newValue },
+                { merge: true }
+            );
+            }
+        } catch (error) {
+            console.error("備考 update error:", error);
+        }
+        };
+
     const handleInputChange = (e) => {
         if (!isComposing) {
             const value = e.target.value;
@@ -1594,6 +1614,7 @@ const BreakfastCheckin = () => {
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>スタートタイム</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>状況</th>
                             <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>アクション</th>
+                            <th style={{ textAlign: 'center', backgroundColor: '#E4DFD1' }}>備考</th>
                         </tr>
                         </thead>
 
@@ -1686,6 +1707,30 @@ const BreakfastCheckin = () => {
                                         S
                                     </button>
                                     </td>
+                                        <td style={rowStyle}>
+                                            <textarea
+                                                defaultValue={guest.remarks || ""}
+                                                onBlur={(e) => {
+                                                const newValue = e.target.value;
+                                                updateRemarks(guest, newValue);
+                                                }}
+                                                onCompositionEnd={(e) => {
+                                                const newValue = e.target.value;
+                                                updateRemarks(guest, newValue);
+                                                }}
+                                                placeholder="備考を入力"
+                                                style={{
+                                                width: "65%",
+                                                minHeight: "40px",
+                                                padding: "3px",
+                                                border: "1px solid #ccc",
+                                                borderRadius: "4px",
+                                                resize: "none",           // không cho kéo rộng ô
+                                                whiteSpace: "pre-wrap",   // giữ xuống dòng
+                                                wordBreak: "break-word"   // tự ngắt chữ dài
+                                                }}
+                                            />
+                                            </td>
                                 </tr>
                                 );
                             })

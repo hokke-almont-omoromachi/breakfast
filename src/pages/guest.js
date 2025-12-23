@@ -111,6 +111,7 @@ const GuestCheckin = () => {
     const goToRestaurant = () => navigate('/restaurant');
     const goToFull = () => navigate('/fullSeat');
     const goToGuest = () => {navigate('/guest'); };
+    const goToSetting = () => {navigate('/setting')};
 
     const handleInputChange = (e) => {
         setRoomNumber(e.target.value);
@@ -239,6 +240,10 @@ const GuestCheckin = () => {
                     src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Full"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToFull}
+                />
+                <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting"
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+                    onClick={goToSetting}
                 />
             </div>
 

@@ -37,12 +37,14 @@ const BreakfastCheckin = () => {
     const [selectedNotArrivedGuests, setSelectedNotArrivedGuests] = useState([]);
     const [selectedWaitingGuests, setSelectedWaitingGuests] = useState([]);
     const [processingButtons, setProcessingButtons] = useState({});
+    const [showUpload, setShowUpload] = useState(false);
 
     const navigate = useNavigate();
     const goToHome = () => { navigate('/home'); };
     const goToRestaurant = () => navigate('/restaurant');
     const goToGuest = () => { navigate('/guest'); };
     const gotoFull = () => { navigate('/fullSeat'); };
+    const goToSetting = () => {navigate('/setting')};
 
     const previousModalContentRef = useRef(null);
 
@@ -1326,6 +1328,10 @@ const BreakfastCheckin = () => {
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={gotoFull}
                 />
+                    <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting"
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+                    onClick={goToSetting}
+                />
 
             </div>
 
@@ -1903,21 +1909,25 @@ const BreakfastCheckin = () => {
                 </div>
                 )}
 
-            <div className="input-and-purchase" style={{ marginTop: '20px' }}>
-                <div className="input-section" style={{ maxWidth: '600px', width: '100%', textAlign: 'left' }}>
-                    <h3>朝食リストアップロード</h3>
-                    <input
-                        type="file"
-                        accept=".xlsx, .xls, .csv"
+        <div className="input-and-purchase" style={{ marginTop: '20px' }}>
+            <div  className="input-section" style={{maxWidth: '600px', gap: '8px',   width: '100%', }}>
+            <div style={{display: 'flex', alignItems: 'center',gap: '10px',marginBottom: '10px',}}>
+                <h3 style={{ margin: 0 }}> 朝食リストアップロード </h3>
+                <button onClick={() => setShowUpload(prev => !prev)}> {showUpload ? '非表示' : '表示'} </button>
+            </div>
+
+            {showUpload && (
+                <div style={{display: 'flex', flexDirection: 'column',   gap: '15px', }}>
+                    <input type="file" accept=".xlsx,.xls,.csv"
                         onChange={handleFileChange}
                         ref={fileInputRef}
-                    />
-                    <button onClick={handleRefresh} className="torikeshi">全取消</button>
-                </div>
+                        style={{ fontSize: '1.05em' }}/>
+
+                    <button onClick={handleRefresh} className="torikeshi">  全取消</button>
+                </div>  )}
             </div>
         </div>
-    );
-
-};
+    </div>
+    );};
 
 export default BreakfastCheckin;

@@ -44,6 +44,9 @@ function Home() {
                 <Link to="/fullSeat">
                   <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" style={{ width: '100px', heig6ht: '100px' }} />
                 </Link>
+                <Link to="/setting">
+                  <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting" style={{ width: '100px', heig6ht: '100px' }} />
+                </Link>
             </div>
         </div>
     </div>

@@ -52,7 +52,7 @@ const Setting = () => {
 >
   <div
     style={{
-      backgroundColor: '#fff',
+      backgroundColor: '#faf5e9ff',
       padding: '40px',
       borderRadius: '12px',
       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
@@ -64,18 +64,24 @@ const Setting = () => {
       朝食リストアップロード
     </h3>
 
-    <input
-      type="file"
-      accept=".xlsx,.xls,.csv"
-      onChange={handleFileChange}
-      ref={fileInputRef}
+    <div
       style={{
-        fontSize: '1.1em',
+        textAlign: 'center',
         marginBottom: '20px',
+        marginLeft:'60px'
       }}
-    />
+    >
+      <input
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        onChange={handleFileChange}
+        ref={fileInputRef}
+        style={{
+          fontSize: '1.1em'
+        }}
+      />
+    </div>
 
-    <br />
 
     <button
       onClick={handleRefresh}

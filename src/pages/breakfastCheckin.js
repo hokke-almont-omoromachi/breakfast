@@ -1449,6 +1449,7 @@ const BreakfastCheckin = () => {
                         style={{ width: '100%', height: '30px', marginBottom: '10px' }}
                         type="number"
                         inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="部屋番号入力"
                         value={roomNumber}
                         onChange={(e) => setRoomNumber(e.target.value)}

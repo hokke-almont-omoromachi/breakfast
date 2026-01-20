@@ -1463,7 +1463,7 @@ const BreakfastCheckin = () => {
                     <div className="modal-content" style={{ textAlign: 'center' }}>
                         <p
                         style={{
-                            fontSize: '25px',
+                            fontSize: '20px',
                             fontWeight: 'bold',
                             lineHeight: '1.8',
                             textAlign: 'center',

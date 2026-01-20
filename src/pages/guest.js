@@ -220,31 +220,47 @@ const GuestCheckin = () => {
 
     return (
         <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '100vh' }}>
-            <div style={{ marginBottom: '10px' }}>
-                <img
-                    src={`${process.env.PUBLIC_URL}/assets/home.png`} alt="Home"
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                 
+                }}
+                >
+                {/* Nhóm icon bên trái */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/home.png`}
+                    alt="Home"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToHome}
-                />
-                <img
-                    src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/restaurant.png`}
+                    alt="Restaurant"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToRestaurant}
-                />
-                                <img
-                    src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Restaurant"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/guest.png`}
+                    alt="Guest"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToGuest}
-                />
-                <img
-                    src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Full"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/full.png`}
+                    alt="Full"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToFull}
-                />
-                <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/setting.png`}
+                    alt="Setting"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToSetting}
-                />
+                    />
+                </div>
             </div>
 
             <div style={{ textAlign: 'center' }}>

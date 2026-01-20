@@ -13,30 +13,47 @@ const FullSeat = () => {
 
     return (
         <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '100vh' }}>
-            <div style={{ marginBottom: '10px' }}>
-                <img
-                    src={`${process.env.PUBLIC_URL}/assets/home.png`} alt="Home"
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                 
+                }}
+                >
+                {/* Nhóm icon bên trái */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/home.png`}
+                    alt="Home"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToHome}
-                />
-                <img
-                    src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/restaurant.png`}
+                    alt="Restaurant"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToRestaurant}
-                />
-                <img
-                    src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/guest.png`}
+                    alt="Guest"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToGuest}
-                />
-               <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" 
-                    style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
-                    onClick={goToFull} 
-                />             
-                <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting" 
-                    style={{ cursor: 'pointer', width: '40px', height: '35px' }} 
-                    onClick={goToSetting} 
-                />
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/full.png`}
+                    alt="Full"
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+                    onClick={goToFull}
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/setting.png`}
+                    alt="Setting"
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+                    onClick={goToSetting}
+                    />
+                </div>
             </div>
 
             <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 65px)' }}>
@@ -54,6 +71,13 @@ const FullSeat = () => {
                     <p style={{ fontSize: '1.2em', lineHeight: '1.5' }}>
                     We are currently fully booked.<br />We will guide you to your seat as soon as one becomes available.
                     </p>
+                    
+                    <p style={{ fontSize: '1.2em', lineHeight: '1.5' }}>
+                    目前客滿，請稍候。
+                    <br />有座位後將依序為您安排。
+                    </p>
+                    <p style={{ fontSize: '1.2em', lineHeight: '1.5' }}>
+                    현재 만석입니다.<br />자리가 나오는 대로 순서대로 안내해 드리겠습니다.</p>
                 </div>
             </div>
         </div>

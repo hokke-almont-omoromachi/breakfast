@@ -38,6 +38,7 @@ const BreakfastCheckin = () => {
     const [selectedWaitingGuests, setSelectedWaitingGuests] = useState([]);
     const [processingButtons, setProcessingButtons] = useState({});
     const [showUpload, setShowUpload] = useState(false);
+    const [showHelpModal, setShowHelpModal] = useState(false);
 
     const navigate = useNavigate();
     const goToHome = () => { navigate('/home'); };
@@ -1166,8 +1167,7 @@ const BreakfastCheckin = () => {
         setShowPartialModal(true);
     };
 
-
-         const handleCheckInGuestPartial = async (guest, arrivedCount) => {
+     const handleCheckInGuestPartial = async (guest, arrivedCount) => {
         try {
             if (!guest) {
                 console.warn("Guest data is null or undefined for partial check-in.");
@@ -1274,9 +1274,6 @@ const BreakfastCheckin = () => {
         }
     };
 
-
-
-
     const closePartialModal = (returnToPreviousModal = true) => {
         setShowPartialModal(false);
         setPartialCheckinData(null);
@@ -1311,29 +1308,56 @@ const BreakfastCheckin = () => {
 
     return (
         <div className="checkin-container" style={{ backgroundColor: '#F2EBE0' }}>
-            <div>
-                <img src={`${process.env.PUBLIC_URL}/assets/home.png`} alt="Home"
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                 
+                }}
+                >
+                {/* Nhóm icon bên trái */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/home.png`}
+                    alt="Home"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToHome}
-                />
-                <img src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Guest"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/restaurant.png`}
+                    alt="Restaurant"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToRestaurant}
-                />
-                <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/guest.png`}
+                    alt="Guest"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToGuest}
-                />
-                <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/full.png`}
+                    alt="Full"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={gotoFull}
-                />
-                    <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting"
+                    />
+                    <img
+                    src={`${process.env.PUBLIC_URL}/assets/setting.png`}
+                    alt="Setting"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={goToSetting}
-                />
+                    />
+                </div>
 
-            </div>
+                {/* Icon help bên phải */}
+                <img
+                    src={`${process.env.PUBLIC_URL}/assets/help.png`}
+                    alt="Help"
+                    style={{ cursor: 'pointer', width: '40px', height: '35px' }}
+                    onClick={() => setShowHelpModal(true)}
+                />
+                </div>
 
             <h2 className="centered-title">
                 はなもみ　　朝食チェックイン　　{getCurrentDate()}
@@ -1434,6 +1458,39 @@ const BreakfastCheckin = () => {
                     </div>
                 )}
 
+                {showHelpModal && (
+                <div className="modal">
+                    <div className="modal-content" style={{ textAlign: 'center' }}>
+                        <p
+                        style={{
+                            fontSize: '25px',
+                            fontWeight: 'bold',
+                            lineHeight: '1.8',
+                            textAlign: 'center',
+                            marginBottom: '20px'
+                        }}
+                        >
+                        お部屋番号を教えてください
+                        <br />
+                        Please tell us your room number.
+                        <br />
+                        請告訴我們您的房號。
+                        <br />
+                        객실 번호를 알려주세요.
+                        </p>
+
+                    <button
+                        onClick={() => setShowHelpModal(false)}
+                        style={{
+                        padding: '8px 20px',
+                        cursor: 'pointer'
+                        }}
+                    >
+                        閉じる
+                    </button>
+                    </div>
+                </div>
+                )}
 
             <p style={{ color: '#811121', fontSize: '20px', fontWeight: 'bold' }}>本日人数 <span style={{ color: 'red', fontSize: '30px', fontWeight: 'bold' }}>{totalGuests} </span> 名</p>
             <p>

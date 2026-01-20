@@ -34,18 +34,18 @@ function Home() {
                 padding: '3rem',
                 textAlign: 'center',
               }}>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap',  }}>
                 <Link to="/restaurant">
-                  <img src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant" style={{ width: '100px', height: '100px' }} />
+                  <img src={`${process.env.PUBLIC_URL}/assets/restaurant.png`} alt="Restaurant" style={{width: '80px',  height: '80px', maxWidth: '22vw' }} />
                 </Link>
                 <Link to="/guest">
-                  <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" style={{ width: '100px', heig6ht: '100px' }} />
+                  <img src={`${process.env.PUBLIC_URL}/assets/guest.png`} alt="Guest" style={{ width: '80px',  height: '80px', maxWidth: '22vw' }} />
                 </Link>
                 <Link to="/fullSeat">
-                  <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" style={{ width: '100px', heig6ht: '100px' }} />
+                  <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" style={{ width: '80px',  height: '80px', maxWidth: '22vw' }} />
                 </Link>
                 <Link to="/setting">
-                  <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting" style={{ width: '100px', heig6ht: '100px' }} />
+                  <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting" style={{ width: '80px',  height: '80px', maxWidth: '22vw' }} />
                 </Link>
             </div>
         </div>

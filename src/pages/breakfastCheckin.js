@@ -1470,7 +1470,7 @@ const BreakfastCheckin = () => {
                             marginBottom: '20px'
                         }}
                         >
-                        お部屋番号を教えてください
+                        お部屋番号を教えてください。
                         <br />
                         Please tell us your room number.
                         <br />

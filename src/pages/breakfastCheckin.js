@@ -1711,9 +1711,12 @@ const BreakfastCheckin = () => {
                                         )}
                                     </td>
                                     <td style={indexStyle}>
-                                    <span className={guest.status === 'waiting' ? "blink-red" : ""}>
+                                        <span className={guest.status === 'waiting' ? "blink-red" : ""}>
                                         {guest.fixedIndex}
-                                    </span>
+                                        <span style={{ fontSize: '14px', marginLeft: '4px' }}>
+                                            {`(${guest.subIndex ?? ((guest.fixedIndex - 1) % 16 + 1)})`}
+                                        </span>
+                                        </span>
                                     </td>
                                     <td style={rowStyle}>
                                     {guest.source === 'guest' ? guest.ルーム : guest.roomName}
@@ -1765,6 +1768,7 @@ const BreakfastCheckin = () => {
                                             open: true,
                                             guest: guest,
                                             newIndex: guest.fixedIndex || '',
+                                            newSubIndex: guest.subIndex || ''  
                                         })
                                         }
                                     >
@@ -1929,8 +1933,9 @@ const BreakfastCheckin = () => {
                     <h3>番号の編集</h3>
                     <p>
                         部屋: {editFixedIndexModal.guest?.ルーム || editFixedIndexModal.guest?.roomName} <br />
-                        現在の番号: {editFixedIndexModal.guest?.fixedIndex}
+                        現在のウェイティング 番号: {editFixedIndexModal.guest?.fixedIndex}
                     </p>
+                    <div  style={{ display: 'flex', justifyContent: 'center'}}>
                     <input
                         type="number"
                         placeholder="新しい番号を入力"
@@ -1940,18 +1945,43 @@ const BreakfastCheckin = () => {
                         }
                         style={{ textAlign:'center', width: '80px', margin: '10px 0' }}
                     />
+                    </div>
+                      <p>
+                        現在のブザー番号: {editFixedIndexModal.guest?.subIndex}
+                        </p>
+                     <div  style={{ display: 'flex', justifyContent: 'center'}}>
+                        
+                    <input
+                        type="number"
+                        placeholder="サブ番号"
+                        value={editFixedIndexModal.newSubIndex || ''}
+                        onChange={(e) =>
+                            setEditFixedIndexModal(prev => ({
+                            ...prev,
+                            newSubIndex: e.target.value
+                            }))
+                        }
+                        style={{ textAlign:'center', width: '80px', margin: '10px 0' }}
+                        />
+                        </div>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
                         <button
-                        onClick={async () => {
-                            const { guest, newIndex } = editFixedIndexModal;
-                            if (!isNaN(newIndex) && newIndex !== '') {
-                            const targetCollection = guest.source === 'guest' ? "breakfastGuests" : "breakfastPurchases";
-                            await setDoc(doc(db, targetCollection, guest.id), {
-                                fixedIndex: parseInt(newIndex)
-                            }, { merge: true });
-                            }
-                            setEditFixedIndexModal({ open: false, guest: null, newIndex: '' });
-                        }}
+                                onClick={async () => {
+                                const { guest, newIndex, newSubIndex } = editFixedIndexModal;
+
+                                if (!isNaN(newIndex) && newIndex !== '') {
+                                    const targetCollection = guest.source === 'guest'
+                                    ? "breakfastGuests"
+                                    : "breakfastPurchases";
+
+                                    await setDoc(doc(db, targetCollection, guest.id), {
+                                    fixedIndex: parseInt(newIndex),
+                                    subIndex: newSubIndex ? parseInt(newSubIndex) : null
+                                    }, { merge: true });
+                                }
+
+                                setEditFixedIndexModal({ open: false, guest: null, newIndex: '', newSubIndex: '' });
+                                }}
                         >
                         保存
                         </button>

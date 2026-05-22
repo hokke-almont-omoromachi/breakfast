@@ -1494,9 +1494,9 @@ const BreakfastCheckin = () => {
 
             <p style={{ color: '#811121', fontSize: '20px', fontWeight: 'bold' }}>本日人数 <span style={{ color: 'red', fontSize: '30px', fontWeight: 'bold' }}>{totalGuests} </span> 名</p>
             <p>
-                未到着人数 <span style={{ fontWeight: 'bold' }}>{notArrivedGuests}</span> 名　　　　
+                未到着人数 <span style={{ fontWeight: 'bold' }}>{notArrivedGuests}</span> 名　　
+                ウェイティング中 <span style={{ fontWeight: 'bold' }}>{waitingGuestsCount}</span>名　　
                 到着済人数 <span style={{ fontWeight: 'bold' }}>{checkedInGuests} </span>名　　　　
-                ウェイティング人数 <span style={{ fontWeight: 'bold' }}>{waitingGuestsCount}</span>名
                 {purchaseWaitingCount > 0 && <span style={{ marginLeft: '10px' }}>当日({purchaseWaitingCount}名)</span>}
             </p>
 
@@ -1813,6 +1813,8 @@ const BreakfastCheckin = () => {
                 <div className="guest-list">
                     <div style={{ display: "flex", justifyContent: "left", alignItems: "center", gap: "10px", flexWrap: 'wrap'}}>
                         <h3>未到着 ({notArrivedGuests} 名)</h3>
+                        <h3 style={{ fontSize: '16px', fontStyle: 'italic'}}>
+                            ウェイティング中含め：{notArrivedGuests + waitingGuestsCount}名</h3>
                         <button onClick={() => setShowNotArriveTable(!showNotArriveTable)}>
                             {showNotArriveTable ? "非表示" : "表示"}
                         </button>

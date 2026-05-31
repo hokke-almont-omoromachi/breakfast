@@ -111,7 +111,7 @@ const GuestCheckin = () => {
     const goToRestaurant = () => navigate('/restaurant');
     const goToFull = () => navigate('/fullSeat');
     const goToGuest = () => {navigate('/guest'); };
-    const goToSetting = () => {navigate('/setting')};
+    const goToHikitsugi = () => {navigate('/hikitsugi')};
 
     const handleInputChange = (e) => {
         setRoomNumber(e.target.value);
@@ -255,10 +255,10 @@ const GuestCheckin = () => {
                     onClick={goToFull}
                     />
                     <img
-                    src={`${process.env.PUBLIC_URL}/assets/setting.png`}
-                    alt="Setting"
+                    src={`${process.env.PUBLIC_URL}/assets/hikitsugi.png`}
+                    alt="Hikitsugi"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
-                    onClick={goToSetting}
+                    onClick={goToHikitsugi}
                     />
                 </div>
             </div>

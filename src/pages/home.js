@@ -44,8 +44,8 @@ function Home() {
                 <Link to="/fullSeat">
                   <img src={`${process.env.PUBLIC_URL}/assets/full.png`} alt="Guest" style={{ width: '80px',  height: '80px', maxWidth: '22vw' }} />
                 </Link>
-                <Link to="/setting">
-                  <img src={`${process.env.PUBLIC_URL}/assets/setting.png`} alt="Setting" style={{ width: '80px',  height: '80px', maxWidth: '22vw' }} />
+                <Link to="/hikitsugi">
+                  <img src={`${process.env.PUBLIC_URL}/assets/hikitsugi.png`} alt="Hikitsugi" style={{ width: '80px',  height: '80px', maxWidth: '22vw' }} />
                 </Link>
             </div>
         </div>

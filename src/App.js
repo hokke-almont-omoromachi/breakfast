@@ -7,7 +7,7 @@ import Guest from './pages/guest';
 import Home from './pages/home';
 import Full from './pages/fullSeat';
 import Login from './pages/login';
-import Setting from './pages/setting';
+import Hikitsugi from './pages/hikitsugi';
 import ProtectedRoute from './ProtectedRoute';
 
 // 👉 context
@@ -105,19 +105,19 @@ function App() {
             />
 
             <Route
-              path="/setting"
+              path="/fullSeat"
               element={
                 <ProtectedRoute>
-                  <Setting />
+                  <Full />
                 </ProtectedRoute>
               }
             />
 
             <Route
-              path="/fullSeat"
+              path="/hikitsugi"
               element={
                 <ProtectedRoute>
-                  <Full />
+                  <Hikitsugi />
                 </ProtectedRoute>
               }
             />

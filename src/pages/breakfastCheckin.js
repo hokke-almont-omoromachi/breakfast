@@ -45,7 +45,7 @@ const BreakfastCheckin = () => {
     const goToRestaurant = () => navigate('/restaurant');
     const goToGuest = () => { navigate('/guest'); };
     const gotoFull = () => { navigate('/fullSeat'); };
-    const goToSetting = () => {navigate('/setting')};
+    const goToHikitsugi = () => {navigate('/hikitsugi')};
 
     const previousModalContentRef = useRef(null);
 
@@ -1342,12 +1342,14 @@ const BreakfastCheckin = () => {
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
                     onClick={gotoFull}
                     />
+   
                     <img
-                    src={`${process.env.PUBLIC_URL}/assets/setting.png`}
-                    alt="Setting"
+                    src={`${process.env.PUBLIC_URL}/assets/hikitsugi.png`}
+                    alt="Hikitsugi"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
-                    onClick={goToSetting}
+                    onClick={goToHikitsugi}
                     />
+
                 </div>
 
                 {/* Icon help bên phải */}

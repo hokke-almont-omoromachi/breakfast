@@ -9,7 +9,7 @@ const FullSeat = () => {
     const goToRestaurant = () => navigate('/restaurant');
     const goToGuest = () => { navigate('/guest'); };
     const goToFull = () => navigate('/fullSeat');
-    const goToSetting = () => {navigate('/setting')};
+    const goToHikitsugi = () => {navigate('/hikitsugi')};
 
     return (
         <div className="checkin-container" style={{ backgroundColor: '#F2EBE0', minHeight: '100vh' }}>
@@ -48,38 +48,35 @@ const FullSeat = () => {
                     onClick={goToFull}
                     />
                     <img
-                    src={`${process.env.PUBLIC_URL}/assets/setting.png`}
-                    alt="Setting"
+                    src={`${process.env.PUBLIC_URL}/assets/hikitsugi.png`}
+                    alt="Hikitsugi"
                     style={{ cursor: 'pointer', width: '40px', height: '35px' }}
-                    onClick={goToSetting}
+                    onClick={goToHikitsugi}
                     />
                 </div>
-            </div>
+            </div> 
 
-            <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 65px)' }}>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <img
-                        src={`${process.env.PUBLIC_URL}/assets/hokkun.png`} // Thay thế bằng đường dẫn ảnh của bạn
-                        alt="満席"
-                        style={{ maxWidth: '80%', maxHeight: '90%', objectFit: 'contain' }}
-                    />
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 65px)',width: '100%'}}>
+                    {/* Hộp phụ bọc quanh text để gom các dòng lại gần nhau */}
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{ color: '#811121', fontSize: '2em', fontWeight: 'bold', lineHeight: '1.4', margin: '0 0 15px 0' }}>
+                            只今、満席でございます。<br />お席が空き次第、順番にご案内させていただきます。
+                        </p>
+                        
+                        <p style={{ fontSize: '1.2em', lineHeight: '1.4', margin: '0 0 15px 0' }}>
+                            We are currently fully booked.<br />We will guide you to your seat as soon as one becomes available.
+                        </p>
+                        
+                        <p style={{ fontSize: '1.2em', lineHeight: '1.4', margin: '0 0 15px 0' }}>
+                            目前客滿，請稍候。<br />有座位後將依序為您安排。
+                        </p>
+                        
+                        <p style={{ fontSize: '1.2em', lineHeight: '1.4', margin: '0' }}>
+                            현재 만석입니다.<br />자리가 나오는 대로 순서대로 안내해 드리겠습니다.
+                        </p>
+
+                    </div>
                 </div>
-                <div style={{ flex: 1, padding: '20px', textAlign: 'left' }}>
-                    <p style={{color:'#811121', fontSize: '2em', fontWeight: 'bold', marginBottom: '10px', lineHeight: '1.5' }}>
-                      只今、満席でございます。<br />お席が空き次第、順番にご案内させていただきます。
-                    </p>
-                    <p style={{ fontSize: '1.2em', lineHeight: '1.5' }}>
-                    We are currently fully booked.<br />We will guide you to your seat as soon as one becomes available.
-                    </p>
-                    
-                    <p style={{ fontSize: '1.2em', lineHeight: '1.5' }}>
-                    目前客滿，請稍候。
-                    <br />有座位後將依序為您安排。
-                    </p>
-                    <p style={{ fontSize: '1.2em', lineHeight: '1.5' }}>
-                    현재 만석입니다.<br />자리가 나오는 대로 순서대로 안내해 드리겠습니다.</p>
-                </div>
-            </div>
         </div>
     );
 };

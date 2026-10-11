@@ -1716,7 +1716,7 @@ const BreakfastCheckin = () => {
                                     <span className={guest.status === 'waiting' ? "blink-red" : ""}>
                                          {guest.fixedIndex}
                                             <span style={{ fontSize: '14px', marginLeft: '4px' }}>
-                                                ({((guest.fixedIndex - 1) % 16) + 1})
+                                                ({((guest.fixedIndex - 1) % 32) + 1})
                                             </span>
                                     </span>
                                     </td>
